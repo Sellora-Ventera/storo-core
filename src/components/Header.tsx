@@ -54,8 +54,8 @@ const Header = () => {
           <Link to="/" className="flex items-center space-x-3">
             <img 
               src={storoLogo} 
-              alt="Storo.id" 
-              className="h-8 w-auto"
+              alt="Storo.id Logo" 
+              className="h-10 w-auto object-contain"
             />
           </Link>
 
