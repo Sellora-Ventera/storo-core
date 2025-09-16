@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Problem from "@/components/Problem";
 import Solution from "@/components/Solution";
@@ -33,17 +34,20 @@ const Index = () => {
   }, []);
 
   return (
-    <main className="font-inter">
-      <Hero />
-      <Problem />
-      <Solution />
-      <HowItWorks />
-      <Pricing />
-      <FAQ />
-      <ContactForm />
-      <ClosingCTA />
+    <div className="font-inter">
+      <Header />
+      <main>
+        <Hero />
+        <Problem />
+        <Solution />
+        <HowItWorks />
+        <Pricing />
+        <FAQ />
+        <ContactForm />
+        <ClosingCTA />
+      </main>
       <WhatsAppFloat />
-    </main>
+    </div>
   );
 };
 
