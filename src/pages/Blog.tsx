@@ -44,7 +44,7 @@ const blogPosts = [
     author: "Tim Storo.id",
     date: "8 Maret 2024",
     category: "Marketing",
-    image: "https://images.unsplash.com/photo-1571721795195-a2ca4d4e0d2f?w=800&h=400&fit=crop"
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop"
   },
   {
     id: 5,
