@@ -190,10 +190,12 @@ const Blog = () => {
                       <User size={14} />
                       <span>{post.author}</span>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary group-hover:translate-x-1 transition-all duration-200">
-                      Baca Selengkapnya
-                      <ArrowRight size={14} className="ml-1" />
-                    </Button>
+                    <Link to={`/blog/${post.id}`}>
+                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary group-hover:translate-x-1 transition-all duration-200">
+                        Baca Selengkapnya
+                        <ArrowRight size={14} className="ml-1" />
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
