@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 
 const Hero = () => {
   return (
-    <section className="bg-gradient-to-br from-orange-50 to-teal-50 section-padding">
+    <section className="bg-gradient-to-br from-primary/5 to-secondary/5 section-padding">
       <div className="container mx-auto px-6">
         <div className="text-center max-w-4xl mx-auto">
           {/* Logo */}

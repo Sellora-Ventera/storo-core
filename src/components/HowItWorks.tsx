@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 const HowItWorks = () => {
   const steps = [
     {
@@ -59,12 +61,12 @@ const HowItWorks = () => {
             <p className="text-lg text-gray-600 mb-6">
               Tidak yakin? Konsultasi dulu gratis!
             </p>
-            <button 
-              className="btn-secondary"
-              onClick={() => window.open('https://wa.me/6281234567890?text=Halo%20Storo.id,%20saya%20mau%20tanya%20tentang%20cara%20kerja%20webstore', '_blank')}
+            <Button 
+              variant="secondary"
+              onClick={() => window.open('https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20mau%20tanya%20tentang%20cara%20kerja%20webstore', '_blank')}
             >
               Tanya via WhatsApp
-            </button>
+            </Button>
           </div>
         </div>
       </div>
