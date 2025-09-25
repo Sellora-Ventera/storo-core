@@ -9,6 +9,8 @@ import FAQ from "@/components/FAQ";
 import ClosingCTA from "@/components/ClosingCTA";
 import ContactForm from "@/components/ContactForm";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import LeadCapturePopup from "@/components/LeadCapturePopup";
+import ExitIntentPopup from "@/components/ExitIntentPopup";
 
 const Index = () => {
   useEffect(() => {
@@ -47,6 +49,8 @@ const Index = () => {
         <ClosingCTA />
       </main>
       <WhatsAppFloat />
+      <LeadCapturePopup />
+      <ExitIntentPopup />
     </div>
   );
 };
