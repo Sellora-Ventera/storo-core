@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
+import brandingStrategyImg from "@/assets/blog-branding-strategy.jpg";
+import returnRefundImg from "@/assets/blog-return-refund.jpg";
+import digitalMarketingImg from "@/assets/blog-digital-marketing.jpg";
+import dataSecurityImg from "@/assets/blog-data-security.jpg";
+import mobileOptimizationImg from "@/assets/blog-mobile-optimization.jpg";
+import affiliateMarketingImg from "@/assets/blog-affiliate-marketing.jpg";
+import crossSellingImg from "@/assets/blog-cross-selling.jpg";
+import dropshippingResellerImg from "@/assets/blog-dropshipping-reseller.jpg";
+import packagingDesignImg from "@/assets/blog-packaging-design.jpg";
+import competitorAnalysisImg from "@/assets/blog-competitor-analysis.jpg";
 
 const blogPosts = [
   {
@@ -105,6 +115,106 @@ const blogPosts = [
     date: "22 Februari 2024",
     category: "Insight",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop"
+  },
+  {
+    id: 11,
+    title: "Strategi Branding untuk Toko Online: Membangun Identitas Brand yang Kuat",
+    excerpt: "Panduan lengkap membangun identitas brand yang memorable dan meningkatkan loyalitas pelanggan untuk toko online Anda.",
+    content: "Brand yang kuat adalah kunci kesuksesan jangka panjang dalam e-commerce. Pelajari strategi membangun identitas brand yang memorable...",
+    author: "Tim Storo.id",
+    date: "20 September 2024",
+    category: "Branding",
+    image: brandingStrategyImg
+  },
+  {
+    id: 12,
+    title: "Cara Menangani Return dan Refund di Toko Online dengan Profesional",
+    excerpt: "Sistem pengelolaan return dan refund yang baik dapat meningkatkan kepercayaan pelanggan dan mengurangi komplain.",
+    content: "Mengelola return dan refund adalah bagian penting dari customer service yang excellent. Berikut panduan lengkapnya...",
+    author: "Tim Storo.id",
+    date: "18 September 2024",
+    category: "Customer Service",
+    image: returnRefundImg
+  },
+  {
+    id: 13,
+    title: "Digital Marketing untuk UMKM: Instagram, TikTok, dan Facebook Ads",
+    excerpt: "Strategi pemasaran digital yang efektif dan terjangkau untuk UMKM di platform media sosial populer Indonesia.",
+    content: "Media sosial adalah channel marketing paling cost-effective untuk UMKM. Pelajari cara memaksimalkan ROI Anda...",
+    author: "Tim Storo.id",
+    date: "15 September 2024",
+    category: "Marketing",
+    image: digitalMarketingImg
+  },
+  {
+    id: 14,
+    title: "Keamanan Data Pelanggan: SSL, GDPR, dan Perlindungan Privacy",
+    excerpt: "Pentingnya mengamankan data pelanggan dan implementasi standar keamanan internasional untuk toko online.",
+    content: "Keamanan data bukan hanya kewajiban hukum, tapi juga kunci membangun kepercayaan pelanggan. Pelajari best practices-nya...",
+    author: "Tim Storo.id",
+    date: "12 September 2024",
+    category: "Security",
+    image: dataSecurityImg
+  },
+  {
+    id: 15,
+    title: "Optimasi Mobile-First untuk Toko Online di Era Smartphone",
+    excerpt: "Lebih dari 80% konsumen Indonesia berbelanja via mobile. Pelajari cara mengoptimalkan toko online untuk mobile users.",
+    content: "Mobile commerce adalah masa depan e-commerce Indonesia. Pastikan toko online Anda mobile-friendly dengan panduan ini...",
+    author: "Tim Storo.id",
+    date: "10 September 2024",
+    category: "Technical",
+    image: mobileOptimizationImg
+  },
+  {
+    id: 16,
+    title: "Affiliate Marketing: Tingkatkan Penjualan dengan Program Reseller",
+    excerpt: "Membangun jaringan affiliate yang kuat untuk meningkatkan reach dan penjualan tanpa menambah biaya marketing yang besar.",
+    content: "Program affiliate adalah cara efektif scaling bisnis dengan performance-based marketing. Berikut cara memulainya...",
+    author: "Tim Storo.id",
+    date: "8 September 2024",
+    category: "Marketing",
+    image: affiliateMarketingImg
+  },
+  {
+    id: 17,
+    title: "Cross-selling dan Upselling: Teknik Meningkatkan Nilai Transaksi",
+    excerpt: "Strategi terbukti untuk meningkatkan average order value melalui teknik cross-selling dan upselling yang efektif.",
+    content: "Meningkatkan nilai transaksi existing customer lebih mudah dan murah daripada mencari customer baru. Pelajari caranya...",
+    author: "Tim Storo.id",
+    date: "5 September 2024",
+    category: "Sales",
+    image: crossSellingImg
+  },
+  {
+    id: 18,
+    title: "Dropshipping vs Reseller: Mana yang Lebih Menguntungkan?",
+    excerpt: "Analisis mendalam kelebihan dan kekurangan model bisnis dropshipping vs reseller untuk pemula e-commerce.",
+    content: "Memilih model bisnis yang tepat adalah langkah crucial untuk kesuksesan e-commerce. Mari bandingkan kedua model ini...",
+    author: "Tim Storo.id",
+    date: "3 September 2024",
+    category: "Bisnis",
+    image: dropshippingResellerImg
+  },
+  {
+    id: 19,
+    title: "Packaging yang Menarik: First Impression untuk Toko Online",
+    excerpt: "Kemasan yang menarik dapat meningkatkan customer satisfaction dan mendorong repeat purchase serta word-of-mouth marketing.",
+    content: "Unboxing experience yang memorable adalah marketing tool yang powerful. Pelajari cara menciptakan packaging yang WOW...",
+    author: "Tim Storo.id",
+    date: "1 September 2024",
+    category: "Branding",
+    image: packagingDesignImg
+  },
+  {
+    id: 20,
+    title: "Analisis Kompetitor: Strategi Mengalahkan Pesaing di Niche Market",
+    excerpt: "Metodologi systematic untuk menganalisis kompetitor dan menemukan competitive advantage dalam niche market Anda.",
+    content: "Mengetahui kekuatan dan kelemahan kompetitor adalah kunci untuk mengembangkan strategi bisnis yang winning. Berikut caranya...",
+    author: "Tim Storo.id",
+    date: "28 Agustus 2024",
+    category: "Strategy",
+    image: competitorAnalysisImg
   }
 ];
 
