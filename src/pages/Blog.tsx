@@ -61,7 +61,7 @@ const blogPosts = [
       <p>Dengan strategi yang tepat dan bimbingan profesional, UMKM Indonesia dapat berkompetisi secara efektif di pasar digital dan meraih kesuksesan jangka panjang.</p>
     `,
     author: "Tim Storo.id",
-    date: "25 September 2024",
+    date: "27 September 2025",
     category: "Konsultasi",
     image: konsultasiEcommerceImg
   },
@@ -100,7 +100,7 @@ const blogPosts = [
       <p>Dengan strategi multi-channel yang tepat, bisnis Anda dapat meraih growth yang sustainable dan less risky dalam menghadapi dynamic landscape e-commerce Indonesia.</p>
     `,
     author: "Tim Storo.id",
-    date: "23 September 2024",
+    date: "25 September 2025",
     category: "Strategi",
     image: marketplaceStrategyImg
   },
@@ -150,7 +150,7 @@ const blogPosts = [
       <p>Sistem manajemen stok yang baik tidak hanya mengoptimalkan operasional, tetapi juga menjadi competitive advantage dalam memberikan customer experience yang superior.</p>
     `,
     author: "Tim Storo.id",
-    date: "21 September 2024",
+    date: "23 September 2025",
     category: "Operasional",
     image: manajemenStokImg
   },
@@ -202,7 +202,7 @@ const blogPosts = [
       <p>Payment gateway yang tepat tidak hanya memproses transaksi, tetapi juga menjadi enabler untuk business growth dan customer satisfaction yang optimal.</p>
     `,
     author: "Tim Storo.id",
-    date: "19 September 2024",
+    date: "21 September 2025",
     category: "Teknologi",
     image: paymentGatewayImg
   },
@@ -263,7 +263,7 @@ const blogPosts = [
       <p>Social media marketing yang efektif membutuhkan consistency, authenticity, dan deep understanding tentang audience behavior. Focus pada building relationships rather than selling products.</p>
     `,
     author: "Tim Storo.id",
-    date: "17 September 2024",
+    date: "19 September 2025",
     category: "Marketing",
     image: socialMediaMarketingImg
   },
@@ -332,7 +332,7 @@ const blogPosts = [
       <p>Mobile-first design adalah investment dalam future business growth. Superior mobile experience directly correlates dengan higher conversion rates, better SEO rankings, dan increased customer satisfaction.</p>
     `,
     author: "Tim Storo.id",
-    date: "15 September 2024",
+    date: "17 September 2025",
     category: "Teknologi",
     image: websiteResponsifImg
   },
@@ -437,7 +437,7 @@ const blogPosts = [
       <p>Profitability analysis yang accurate adalah foundation untuk sustainable business growth. Regular monitoring dan optimization dapat significantly improve bottom-line performance.</p>
     `,
     author: "Tim Storo.id",
-    date: "13 September 2024",
+    date: "15 September 2025",
     category: "Keuangan",
     image: analisisKeuntunganImg
   },
@@ -534,7 +534,7 @@ const blogPosts = [
       <p>Exceptional customer service requires consistent effort, proper tools, dan continuous improvement. Investment dalam customer service directly translates ke customer loyalty dan business growth.</p>
     `,
     author: "Tim Storo.id",
-    date: "11 September 2024",
+    date: "13 September 2025",
     category: "Customer Service",
     image: customerServiceImg
   },
@@ -641,7 +641,7 @@ const blogPosts = [
       <p>Digital transformation adalah journey, bukan destination. Success requires commitment, planning, dan willingness untuk adapt dan learn continuously. The benefits - improved efficiency, better customer experience, new revenue opportunities - make the effort worthwhile.</p>
     `,
     author: "Tim Storo.id",
-    date: "9 September 2024",
+    date: "11 September 2025",
     category: "Transformasi Digital",
     image: transformasiDigitalImg
   },
@@ -769,9 +769,125 @@ const blogPosts = [
       <p>Successful automation requires careful planning, gradual implementation, dan continuous monitoring. The goal is untuk free up human resources untuk higher-value activities while improving accuracy dan efficiency of routine operations.</p>
     `,
     author: "Tim Storo.id",
-    date: "7 September 2024",
+    date: "9 September 2025",
     category: "Otomatisasi",
     image: otomatisasiBisnisImg
+  },
+  {
+    id: 11,
+    title: "Strategi Branding yang Kuat untuk UMKM Digital",
+    excerpt: "Membangun identitas brand yang memorable dan sustainable di pasar digital Indonesia yang kompetitif.",
+    content: `
+      <h2>Pentingnya Branding untuk UMKM Digital</h2>
+      <p>Di era digital yang semakin kompetitif, branding bukan lagi privilege untuk perusahaan besar saja. UMKM digital membutuhkan strategi branding yang kuat untuk differentiate dari kompetitor dan build trust dengan target audience.</p>
+      
+      <h3>Foundation Branding Strategy</h3>
+      <p><strong>Brand Purpose:</strong> Define clear mission dan vision yang resonant dengan target market. Brand dengan purpose yang jelas memiliki connection yang lebih kuat dengan customers.</p>
+      
+      <p><strong>Target Audience Profiling:</strong> Create detailed buyer personas berdasarkan demographic, psychographic, dan behavioral data untuk focused messaging.</p>
+      
+      <h3>Visual Identity Development</h3>
+      <p><strong>Logo Design:</strong> Create memorable logo yang scalable across different platforms dan mediums. Consider cultural context dan color psychology untuk Indonesia market.</p>
+      
+      <p><strong>Color Palette:</strong> Develop consistent color scheme yang reflect brand personality dan appeal to target demographic.</p>
+      
+      <h3>Brand Voice dan Messaging</h3>
+      <p><strong>Tone of Voice:</strong> Establish consistent communication style yang authentic dan relatable untuk Indonesian audience.</p>
+      
+      <p>Strong branding creates competitive advantage dan customer loyalty yang sustainable untuk long-term business growth.</p>
+    `,
+    author: "Tim Storo.id",
+    date: "7 September 2025",
+    category: "Branding",
+    image: brandingStrategyImg
+  },
+  {
+    id: 12,
+    title: "Return dan Refund Policy yang Customer-Friendly",
+    excerpt: "Merancang kebijakan return dan refund yang balance antara customer satisfaction dan business protection.",
+    content: `
+      <h2>Importance of Clear Return Policy</h2>
+      <p>Return dan refund policy yang jelas dan fair adalah crucial element dalam building customer trust dan reducing purchase anxiety. Policy yang well-designed dapat menjadi competitive advantage.</p>
+      
+      <h3>Key Components Return Policy</h3>
+      <p><strong>Time Frame:</strong> Establish reasonable return window, typically 7-30 days depending pada product type dan industry standard.</p>
+      
+      <p><strong>Condition Requirements:</strong> Clearly define acceptable condition untuk returned items dengan specific guidelines.</p>
+      
+      <h3>Refund Process Design</h3>
+      <p><strong>Simple Process:</strong> Create streamlined return process dengan minimal steps dan clear instructions.</p>
+      
+      <p><strong>Multiple Options:</strong> Offer flexibility dalam refund method - original payment method, store credit, atau exchange.</p>
+      
+      <h3>Cost Management</h3>
+      <p><strong>Return Shipping:</strong> Consider offering free return shipping untuk high-value items atau premium customers.</p>
+      
+      <p>Well-designed return policy builds confidence dan dapat increase conversion rate significantly.</p>
+    `,
+    author: "Tim Storo.id",
+    date: "5 September 2025",
+    category: "Kebijakan",
+    image: returnRefundImg
+  },
+  {
+    id: 13,
+    title: "Digital Marketing Fundamentals untuk E-commerce",
+    excerpt: "Foundation knowledge digital marketing yang essential untuk membangun presence dan drive sales online.",
+    content: `
+      <h2>Digital Marketing Landscape Indonesia</h2>
+      <p>Digital marketing telah menjadi primary driver untuk business growth di Indonesia. Dengan proper strategy dan execution, UMKM dapat compete effectively dengan established players.</p>
+      
+      <h3>Search Engine Optimization (SEO)</h3>
+      <p><strong>Keyword Research:</strong> Identify relevant keywords dengan good search volume dan manageable competition untuk target market Indonesia.</p>
+      
+      <p><strong>On-Page Optimization:</strong> Optimize website structure, content, dan technical elements untuk better search rankings.</p>
+      
+      <h3>Paid Advertising Strategy</h3>
+      <p><strong>Google Ads:</strong> Leverage search dan display advertising untuk immediate visibility dan traffic generation.</p>
+      
+      <p><strong>Social Media Ads:</strong> Utilize Facebook, Instagram, dan TikTok advertising untuk targeted reach dan engagement.</p>
+      
+      <h3>Content Marketing</h3>
+      <p><strong>Blog Strategy:</strong> Create valuable content yang address customer pain points dan establish thought leadership.</p>
+      
+      <p><strong>Video Content:</strong> Leverage video marketing untuk product demonstrations dan brand storytelling.</p>
+      
+      <p>Integrated digital marketing approach ensures maximum ROI dan sustainable business growth dalam competitive e-commerce landscape.</p>
+    `,
+    author: "Tim Storo.id",
+    date: "3 September 2025",
+    category: "Marketing",
+    image: digitalMarketingImg
+  },
+  {
+    id: 14,
+    title: "Data Security dan Privacy untuk Online Business",
+    excerpt: "Implementasi security measures yang comprehensive untuk protect customer data dan maintain business integrity.",
+    content: `
+      <h2>Critical Importance of Data Security</h2>
+      <p>Dalam era digital, data security adalah fundamental requirement untuk online business. Customer trust dan regulatory compliance depends pada robust security implementation.</p>
+      
+      <h3>Essential Security Measures</h3>
+      <p><strong>SSL Certificate:</strong> Implement SSL/TLS encryption untuk secure data transmission antara website dan users.</p>
+      
+      <p><strong>Payment Security:</strong> Ensure PCI DSS compliance untuk secure payment processing dan protect financial data.</p>
+      
+      <h3>Privacy Compliance</h3>
+      <p><strong>Privacy Policy:</strong> Create comprehensive privacy policy yang clearly explain data collection, usage, dan protection practices.</p>
+      
+      <p><strong>Consent Management:</strong> Implement proper consent mechanisms untuk data collection dan processing activities.</p>
+      
+      <h3>Data Protection Strategies</h3>
+      <p><strong>Regular Backups:</strong> Maintain regular dan tested backups untuk ensure data recovery capability.</p>
+      
+      <p><strong>Access Control:</strong> Implement role-based access control untuk limit data access based pada business necessity.</p>
+      
+      <p>Strong security foundation protects business reputation dan ensures sustainable growth dalam digital marketplace.</p>
+    `,
+    author: "Tim Storo.id",
+    date: "1 September 2025",
+    category: "Keamanan",
+    image: dataSecurityImg
   }
 ];
 
