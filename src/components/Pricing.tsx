@@ -10,17 +10,17 @@ const Pricing = () => {
       description: "Untuk bisnis yang baru mulai",
       features: [
         "Setup webstore + 100 SKU",
-        "Integrasi payment & ongkir", 
+        "Integrasi payment & ongkir",
         "WooCommerce untuk order processing",
         "Free support 1 bulan",
         "Training penggunaan dasar",
-        "Maintenance & hosting: Rp200rb/bulan"
+        "Maintenance & hosting: Rp200rb/bulan",
       ],
-      popular: false
+      popular: false,
     },
     {
       name: "Pro",
-      price: "Rp2,5 juta", 
+      price: "Rp2,5 juta",
       description: "Paling populer untuk seller aktif",
       features: [
         "Setup webstore + 200 SKU",
@@ -29,24 +29,24 @@ const Pricing = () => {
         "Free domain 1 tahun",
         "Template custom design",
         "Priority support",
-        "Maintenance & hosting: Rp200rb/bulan"
+        "Maintenance & hosting: Rp200rb/bulan",
       ],
-      popular: true
+      popular: true,
     },
     {
       name: "Advance",
       price: "Rp3,5 juta",
       description: "Untuk seller dengan volume tinggi",
       features: [
-        "Setup webstore + 200+ SKU",
+        "Setup webstore + 1000 SKU",
         "AI rewrite judul & deskripsi produk",
         "WooCommerce untuk order processing",
         "Free domain 1 tahun",
         "Template custom design",
         "Priority support",
-        "Maintenance & hosting: Rp200rb/bulan"
+        "Maintenance & hosting: Rp200rb/bulan",
       ],
-      popular: false
+      popular: false,
     },
     {
       name: "Flexible",
@@ -59,9 +59,9 @@ const Pricing = () => {
         "Template custom design",
         "Priority support",
         "Tanpa biaya maintenance",
-        "Lifetime use"
+        "Lifetime use",
       ],
-      popular: false
+      popular: false,
     },
     {
       name: "Custom",
@@ -73,10 +73,10 @@ const Pricing = () => {
         "WooCommerce dengan custom features",
         "SLA support cepat (2 jam)",
         "Marketing automation",
-        "Dedicated account manager"
+        "Dedicated account manager",
       ],
-      popular: false
-    }
+      popular: false,
+    },
   ];
 
   return (
@@ -93,7 +93,10 @@ const Pricing = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8 max-w-7xl mx-auto pt-6">
           {packages.map((pkg, index) => (
-            <div key={index} className={`relative bg-white rounded-xl shadow-lg p-8 ${pkg.popular ? 'ring-2 ring-primary' : ''}`}>
+            <div
+              key={index}
+              className={`relative bg-white rounded-xl shadow-lg p-8 ${pkg.popular ? "ring-2 ring-primary" : ""}`}
+            >
               {pkg.popular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
                   <span className="bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
@@ -101,7 +104,7 @@ const Pricing = () => {
                   </span>
                 </div>
               )}
-              
+
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h3>
                 <div className="text-3xl font-bold text-primary mb-2">{pkg.price}</div>
@@ -117,9 +120,14 @@ const Pricing = () => {
                 ))}
               </div>
 
-              <Button 
-                className={`w-full ${pkg.popular ? 'btn-hero' : 'btn-outline'}`}
-                onClick={() => window.open(`https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20tertarik%20dengan%20paket%20${pkg.name}`, '_blank')}
+              <Button
+                className={`w-full ${pkg.popular ? "btn-hero" : "btn-outline"}`}
+                onClick={() =>
+                  window.open(
+                    `https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20tertarik%20dengan%20paket%20${pkg.name}`,
+                    "_blank",
+                  )
+                }
               >
                 Pilih Paket {pkg.name}
               </Button>
@@ -128,10 +136,12 @@ const Pricing = () => {
         </div>
 
         <div className="text-center mt-12">
-          <Button 
+          <Button
             size="lg"
             className="btn-hero"
-            onClick={() => window.open('https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20mau%20pesan%20webstore', '_blank')}
+            onClick={() =>
+              window.open("https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20mau%20pesan%20webstore", "_blank")
+            }
           >
             Pesan Sekarang via WhatsApp
           </Button>
