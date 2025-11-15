@@ -984,6 +984,7 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Blog page - displaying articles from database */}
       <Header />
       
       {/* Hero Section */}
