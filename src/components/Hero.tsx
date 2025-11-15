@@ -30,7 +30,7 @@ const Hero = () => {
             <Button 
               size="lg"
               className="btn-hero text-lg"
-              onClick={() => window.open('https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20gratis%20untuk%20webstore', '_blank')}
+              onClick={() => window.open('https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20gratis%20untuk%20webstore', '_blank')}
             >
               Konsultasi Gratis via WhatsApp
             </Button>

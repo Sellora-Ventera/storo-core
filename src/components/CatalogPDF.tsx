@@ -200,7 +200,7 @@ const CatalogPDF = () => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Hubungi kami untuk informasi lebih lanjut</Text>
-          <Text style={styles.contactText}>WhatsApp: +62 856-4748-6700</Text>
+          <Text style={styles.contactText}>WhatsApp: +62 851-4841-6700</Text>
           <Text style={styles.contactText}>www.storo.id</Text>
         </View>
       </Page>
@@ -239,7 +239,7 @@ const CatalogPDF = () => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Siap memulai bisnis online Anda?</Text>
-          <Text style={styles.contactText}>WhatsApp: +62 856-4748-6700</Text>
+          <Text style={styles.contactText}>WhatsApp: +62 851-4841-6700</Text>
           <Text style={styles.contactText}>Email: info@storo.id</Text>
           <Text style={styles.contactText}>www.storo.id</Text>
           <Text style={{ fontSize: 9, color: '#94a3b8', marginTop: 15 }}>

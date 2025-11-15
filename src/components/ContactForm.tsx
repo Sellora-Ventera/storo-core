@@ -41,7 +41,7 @@ const ContactForm = () => {
       const waMessage = `Halo Storo.id,%0A%0ANama: ${formData.name}%0ANo. WhatsApp: ${formData.phone}%0APesan: ${formData.message}%0A%0ASaya tertarik dengan layanan webstore dari Storo.id.`;
       
       // Open WhatsApp
-      window.open(`https://wa.me/6285647486700?text=${waMessage}`, '_blank');
+      window.open(`https://wa.me/6285148416700?text=${waMessage}`, '_blank');
       
       // Show success toast
       toast({
@@ -55,7 +55,7 @@ const ContactForm = () => {
       console.error('Error saving lead:', error);
       // Still show WhatsApp on error
       const waMessage = `Halo Storo.id,%0A%0ANama: ${formData.name}%0ANo. WhatsApp: ${formData.phone}%0APesan: ${formData.message}%0A%0ASaya tertarik dengan layanan webstore dari Storo.id.`;
-      window.open(`https://wa.me/6285647486700?text=${waMessage}`, '_blank');
+      window.open(`https://wa.me/6285148416700?text=${waMessage}`, '_blank');
       
       toast({
         title: "Pesan Terkirim!",
@@ -138,10 +138,10 @@ const ContactForm = () => {
               <p className="text-sm text-gray-600">
                 Atau langsung chat WhatsApp: 
                 <button 
-                  onClick={() => window.open('https://wa.me/6285647486700', '_blank')}
+                  onClick={() => window.open('https://wa.me/6285148416700', '_blank')}
                   className="text-primary font-semibold ml-1 hover:underline"
                 >
-                  +62 856-4748-6700
+                  +62 851-4841-6700
                 </button>
               </p>
             </div>

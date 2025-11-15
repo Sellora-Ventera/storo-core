@@ -74,7 +74,7 @@ const ExitIntentPopup = () => {
       const message = `Halo Storo.id! Saya tertarik untuk membuat webstore mandiri.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
       
       // Open WhatsApp
-      window.open(`https://wa.me/6285647486700?text=${message}`, '_blank');
+      window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
       
       toast({
         title: "Pilihan yang tepat! 🎉",
@@ -99,7 +99,7 @@ const ExitIntentPopup = () => {
         localStorage.setItem("storo-exit-intent-seen", "true");
         
         const message = `Halo Storo.id! Saya tertarik untuk membuat webstore mandiri.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
-        window.open(`https://wa.me/6285647486700?text=${message}`, '_blank');
+        window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
         
         toast({
           title: "Pilihan yang tepat! 🎉",

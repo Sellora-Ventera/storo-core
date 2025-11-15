@@ -916,7 +916,7 @@ const Blog = () => {
 
   const handleWhatsApp = () => {
     const message = "Halo Storo.id, saya ingin konsultasi tentang jasa setup webstore dari Shopee";
-    window.open(`https://wa.me/6285647486700?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/6285148416700?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (

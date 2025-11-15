@@ -122,9 +122,9 @@ const Pricing = () => {
 
               <Button
                 className={`w-full ${pkg.popular ? "btn-hero" : "btn-outline"}`}
-                onClick={() =>
+                  onClick={() =>
                   window.open(
-                    `https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20tertarik%20dengan%20paket%20${pkg.name}`,
+                    `https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20tertarik%20dengan%20paket%20${pkg.name}`,
                     "_blank",
                   )
                 }
@@ -140,7 +140,7 @@ const Pricing = () => {
             size="lg"
             className="btn-hero"
             onClick={() =>
-              window.open("https://wa.me/6285647486700?text=Halo%20Storo.id,%20saya%20mau%20pesan%20webstore", "_blank")
+              window.open("https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20pesan%20webstore", "_blank")
             }
           >
             Pesan Sekarang via WhatsApp
