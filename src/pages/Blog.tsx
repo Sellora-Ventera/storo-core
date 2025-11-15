@@ -893,21 +893,33 @@ const blogPosts = [
 ];
 
 const Blog = () => {
-  const [posts, setPosts] = useState<any[]>(blogPosts);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch posts from database
     const fetchPosts = async () => {
+      console.log('🔄 Fetching blog posts from database...');
+      setLoading(true);
+      setError(null);
+      
       try {
         const { data, error } = await supabase
           .from('blog_posts')
           .select('*')
           .order('published_at', { ascending: false });
 
-        if (error) throw error;
+        console.log('📊 Supabase response:', { data, error });
+
+        if (error) {
+          console.error('❌ Supabase error:', error);
+          throw error;
+        }
 
         if (data && data.length > 0) {
+          console.log(`✅ Found ${data.length} blog posts in database`);
+          
           // Transform database posts to match the expected format
           const transformedPosts = data.map((post) => ({
             id: post.id,
@@ -924,13 +936,21 @@ const Blog = () => {
             image: post.image_url,
             slug: post.slug,
           }));
+          
+          console.log('✨ Transformed posts:', transformedPosts);
           setPosts(transformedPosts);
+        } else {
+          console.log('📭 No blog posts found in database, using fallback');
+          setPosts(blogPosts);
         }
       } catch (error) {
-        console.error('Error fetching blog posts:', error);
-        // Keep using hardcoded posts as fallback
+        console.error('❌ Error fetching blog posts:', error);
+        setError('Gagal memuat artikel. Menggunakan artikel contoh.');
+        // Use hardcoded posts as fallback
+        setPosts(blogPosts);
       } finally {
         setLoading(false);
+        console.log('✔️ Fetch complete');
       }
     };
 
@@ -983,16 +1003,48 @@ const Blog = () => {
       {/* Blog Posts Grid */}
       <section className="section-padding">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {posts.map((post, index) => (
-              <Card key={post.id} className={`fade-in hover:shadow-lg transition-all duration-300 group cursor-pointer`} style={{ animationDelay: `${index * 100}ms` }}>
-                <div className="aspect-video overflow-hidden rounded-t-lg">
-                  <img 
-                    src={post.image} 
-                    alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
+          {error && (
+            <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-center">
+              {error}
+            </div>
+          )}
+          
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="aspect-video bg-muted"></div>
+                  <CardHeader>
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-6 bg-muted rounded w-full"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-4 bg-muted rounded w-full mb-2"></div>
+                    <div className="h-4 bg-muted rounded w-2/3"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-xl text-muted-foreground mb-4">Belum ada artikel tersedia</p>
+              <p className="text-muted-foreground">Artikel akan segera ditambahkan</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {posts.map((post, index) => (
+                <Card key={post.id} className={`fade-in hover:shadow-lg transition-all duration-300 group cursor-pointer`} style={{ animationDelay: `${index * 100}ms` }}>
+                  <div className="aspect-video overflow-hidden rounded-t-lg bg-muted">
+                    <img 
+                      src={post.image} 
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        console.error('❌ Image failed to load:', post.image);
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1661956602116-aa6865609028?w=800&h=600&fit=crop';
+                      }}
+                    />
+                  </div>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
                     <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
@@ -1027,6 +1079,7 @@ const Blog = () => {
               </Card>
             ))}
           </div>
+          )}
         </div>
       </section>
 
