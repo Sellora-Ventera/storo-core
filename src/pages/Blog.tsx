@@ -924,31 +924,30 @@ const Blog = () => {
           throw error;
         }
 
-        if (data && data.length > 0) {
-          console.log(`✅ Found ${data.length} blog posts in database`);
-          
-          const transformedPosts = data.map((post) => ({
-            id: post.id,
-            title: post.title,
-            excerpt: post.excerpt,
-            content: post.content,
-            author: post.author,
-            date: new Date(post.published_at).toLocaleDateString('id-ID', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
-            }),
-            category: post.category,
-            image: post.image_url,
-            slug: post.slug,
-          }));
-          
-          console.log('✨ Transformed posts:', transformedPosts);
-          setPosts(transformedPosts);
-        } else {
-          console.log('📭 No blog posts found in database, using fallback');
-          setPosts(blogPosts);
-        }
+        // Transform database posts
+        const transformedDbPosts = data && data.length > 0 ? data.map((post) => ({
+          id: post.id,
+          title: post.title,
+          excerpt: post.excerpt,
+          content: post.content,
+          author: post.author,
+          date: new Date(post.published_at).toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          }),
+          category: post.category,
+          image: post.image_url,
+          slug: post.slug,
+        })) : [];
+
+        // Combine database posts with hardcoded posts
+        // Database posts appear first (more recent), then hardcoded posts
+        const allPosts = [...transformedDbPosts, ...blogPosts];
+        
+        console.log(`✅ Total posts: ${allPosts.length} (${transformedDbPosts.length} from DB + ${blogPosts.length} hardcoded)`);
+        console.log('✨ Combined posts:', allPosts);
+        setPosts(allPosts);
       } catch (error) {
         console.error('❌ Error fetching blog posts:', error);
         if (isMounted) {
