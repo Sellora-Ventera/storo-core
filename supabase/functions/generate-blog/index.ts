@@ -100,7 +100,19 @@ serve(async (req) => {
             4. Contoh implementasi
             5. Call-to-action ke Storo.id
             
-            PENTING: Jangan gunakan # untuk title utama, hanya gunakan ## dan ### untuk sub-headings.`
+            PENTING FORMAT PARAGRAF:
+            - Jangan gunakan # untuk title utama, hanya gunakan ## dan ### untuk sub-headings
+            - WAJIB berikan baris kosong (double newline) antara setiap paragraf
+            - Setiap paragraf harus dipisahkan dengan baris kosong agar mudah dibaca
+            - Contoh format yang benar:
+            
+            Paragraf pertama yang menjelaskan sesuatu.
+            
+            Paragraf kedua yang melanjutkan penjelasan.
+            
+            ## Heading Berikutnya
+            
+            Paragraf setelah heading.`
           },
           {
             role: 'user',
