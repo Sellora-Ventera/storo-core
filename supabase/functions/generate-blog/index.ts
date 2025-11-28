@@ -6,6 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Diverse image queries untuk variasi gambar
+const imageQueries = [
+  'e-commerce shopping cart laptop',
+  'online business success',
+  'digital marketing strategy',
+  'small business entrepreneur',
+  'mobile shopping app',
+  'warehouse inventory management',
+  'customer service support',
+  'product photography studio',
+  'business analytics dashboard',
+  'social media marketing',
+  'delivery package shipping',
+  'credit card payment online',
+  'startup office workspace',
+  'shopping bags retail',
+  'computer coding technology',
+  'business meeting team',
+  'smartphone mobile commerce',
+  'website design development',
+  'marketing campaign creative',
+  'logistics supply chain',
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -128,11 +152,36 @@ serve(async (req) => {
       .replace(/-+/g, '-')
       .trim();
 
-    // Get image dari Unsplash
-    let imageUrl = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800';
+    // Pilih image query random untuk variasi gambar
+    const imageQuery = imageQueries[Math.floor(Math.random() * imageQueries.length)];
+    
+    // Daftar fallback images yang bervariasi
+    const fallbackImages = [
+      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800', // shopping cart
+      'https://images.unsplash.com/photo-1553484771-371a605b060b?w=800', // business team
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800', // analytics
+      'https://images.unsplash.com/photo-1556742111-a301076d9d18?w=800', // warehouse
+      'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800', // credit card
+      'https://images.unsplash.com/photo-1553413077-190dd305871c?w=800', // package delivery
+      'https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=800', // product photo
+      'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=800', // mobile shopping
+      'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800', // business meeting
+      'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800', // laptop work
+      'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800', // strategy planning
+      'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800', // payment
+      'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800', // presentation
+      'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800', // shopping bags
+      'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?w=800', // social media
+    ];
+    
+    // Pilih fallback image random
+    const randomFallback = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+    
+    // Get image dari Unsplash dengan query yang bervariasi
+    let imageUrl = randomFallback;
     try {
       const unsplashResponse = await fetch(
-        `https://api.unsplash.com/photos/random?query=business,online-shopping,e-commerce&orientation=landscape`,
+        `https://api.unsplash.com/photos/random?query=${encodeURIComponent(imageQuery)}&orientation=landscape`,
         {
           headers: {
             'Authorization': 'Client-ID gKYle3_eisaWLj_u3j8EVMM-T6fy5tQD0cWFpZJdPpg',
@@ -143,10 +192,12 @@ serve(async (req) => {
       if (unsplashResponse.ok) {
         const unsplashData = await unsplashResponse.json();
         imageUrl = unsplashData.urls.regular;
-        console.log('[generate-blog] Image fetched from Unsplash');
+        console.log('[generate-blog] Image fetched from Unsplash with query:', imageQuery);
+      } else {
+        console.log('[generate-blog] Unsplash API failed, using random fallback image');
       }
     } catch (e) {
-      console.error('[generate-blog] Unsplash API error, using default image:', e);
+      console.error('[generate-blog] Unsplash API error, using random fallback image:', e);
     }
 
     // Check if slug already exists
