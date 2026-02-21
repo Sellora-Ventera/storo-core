@@ -194,6 +194,48 @@ export type Database = {
           },
         ]
       }
+      brand_wa_mapping: {
+        Row: {
+          brand: string
+          created_at: string | null
+          id: number
+          wa_number: string
+          wa_session: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string | null
+          id?: number
+          wa_number: string
+          wa_session: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string | null
+          id?: number
+          wa_number?: string
+          wa_session?: string
+        }
+        Relationships: []
+      }
+      brands: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           chat_id: string
@@ -367,6 +409,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_logs: {
+        Row: {
+          clicked_at: string | null
+          created_at: string | null
+          email_subject: string | null
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          opened_at: string | null
+          resend_message_id: string | null
+          sent_at: string | null
+          sequence_number: number
+          status: string | null
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string | null
+          email_subject?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          opened_at?: string | null
+          resend_message_id?: string | null
+          sent_at?: string | null
+          sequence_number: number
+          status?: string | null
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string | null
+          email_subject?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          opened_at?: string | null
+          resend_message_id?: string | null
+          sent_at?: string | null
+          sequence_number?: number
+          status?: string | null
+        }
+        Relationships: []
       }
       fin_agent_conversations: {
         Row: {
@@ -1576,48 +1660,230 @@ export type Database = {
         }
         Relationships: []
       }
-      invoice_items: {
+      follow_up_queue: {
         Row: {
-          description: string | null
-          discount_percent: number | null
-          id: string
-          invoice_id: string
-          line_subtotal: number
-          line_tax: number
-          line_total: number
-          product_id: string | null
-          qty: number
-          tax_rate: number | null
-          unit: string | null
-          unit_price: number
+          brand: string
+          created_at: string | null
+          error_message: string | null
+          id: number
+          message_template: string | null
+          nama: string | null
+          phone: string
+          phone_data_id: number | null
+          retry_count: number | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string | null
+          wa_session: string | null
         }
         Insert: {
-          description?: string | null
-          discount_percent?: number | null
-          id?: string
-          invoice_id: string
-          line_subtotal: number
-          line_tax?: number
-          line_total: number
-          product_id?: string | null
-          qty?: number
-          tax_rate?: number | null
-          unit?: string | null
-          unit_price: number
+          brand: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: number
+          message_template?: string | null
+          nama?: string | null
+          phone: string
+          phone_data_id?: number | null
+          retry_count?: number | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string | null
+          wa_session?: string | null
         }
         Update: {
-          description?: string | null
-          discount_percent?: number | null
+          brand?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: number
+          message_template?: string | null
+          nama?: string | null
+          phone?: string
+          phone_data_id?: number | null
+          retry_count?: number | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string | null
+          wa_session?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_queue_phone_data_id_fkey"
+            columns: ["phone_data_id"]
+            isOneToOne: false
+            referencedRelation: "phone_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_status: {
+        Row: {
+          admin_last_reply: string | null
+          created_at: string | null
+          handoff_at: string | null
+          id: number
+          is_handoff: boolean | null
+          last_bot_message_id: string | null
+          last_bot_reply: string | null
+          phone_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_last_reply?: string | null
+          created_at?: string | null
+          handoff_at?: string | null
+          id?: number
+          is_handoff?: boolean | null
+          last_bot_message_id?: string | null
+          last_bot_reply?: string | null
+          phone_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_last_reply?: string | null
+          created_at?: string | null
+          handoff_at?: string | null
+          id?: number
+          is_handoff?: boolean | null
+          last_bot_message_id?: string | null
+          last_bot_reply?: string | null
+          phone_number?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      inv_invoices: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          diskon: number | null
+          downloaded_at: string | null
+          id: string
+          items: Json
+          no_faktur: string | null
+          ongkir: number | null
+          phone_number: string
+          platform: string | null
+          raw_text: string | null
+          status: string | null
+          subtotal: number | null
+          supplier_code: string | null
+          supplier_name: string | null
+          tanggal: string | null
+          total: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          diskon?: number | null
+          downloaded_at?: string | null
           id?: string
-          invoice_id?: string
-          line_subtotal?: number
-          line_tax?: number
-          line_total?: number
-          product_id?: string | null
+          items?: Json
+          no_faktur?: string | null
+          ongkir?: number | null
+          phone_number: string
+          platform?: string | null
+          raw_text?: string | null
+          status?: string | null
+          subtotal?: number | null
+          supplier_code?: string | null
+          supplier_name?: string | null
+          tanggal?: string | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          diskon?: number | null
+          downloaded_at?: string | null
+          id?: string
+          items?: Json
+          no_faktur?: string | null
+          ongkir?: number | null
+          phone_number?: string
+          platform?: string | null
+          raw_text?: string | null
+          status?: string | null
+          subtotal?: number | null
+          supplier_code?: string | null
+          supplier_name?: string | null
+          tanggal?: string | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      inv_master_barang: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          harga_beli: number | null
+          id: number
+          kategori: string | null
+          kode_barang: string
+          nama_barang: string
+          satuan: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          harga_beli?: number | null
+          id?: number
+          kategori?: string | null
+          kode_barang: string
+          nama_barang: string
+          satuan?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          harga_beli?: number | null
+          id?: number
+          kategori?: string | null
+          kode_barang?: string
+          nama_barang?: string
+          satuan?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      invoice_items: {
+        Row: {
+          created_at: string | null
+          harga_satuan: number | null
+          id: string
+          invoice_id: string | null
+          kode_barang: string | null
+          nama_barang: string
+          qty: number
+          satuan: string | null
+          subtotal: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          harga_satuan?: number | null
+          id?: string
+          invoice_id?: string | null
+          kode_barang?: string | null
+          nama_barang: string
+          qty: number
+          satuan?: string | null
+          subtotal?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          harga_satuan?: number | null
+          id?: string
+          invoice_id?: string | null
+          kode_barang?: string | null
+          nama_barang?: string
           qty?: number
-          tax_rate?: number | null
-          unit?: string | null
-          unit_price?: number
+          satuan?: string | null
+          subtotal?: number | null
         }
         Relationships: [
           {
@@ -1657,84 +1923,54 @@ export type Database = {
       }
       invoices: {
         Row: {
-          amount_paid: number
           created_at: string | null
-          created_by: string | null
-          currency: string | null
-          customer_id: string
-          discount_total: number
-          due_date: string | null
           id: string
-          issue_date: string
-          meta: Json | null
-          notes: string | null
-          number: string
-          org_id: string
-          pdf_url: string | null
-          status: string
-          subtotal: number
-          tax_total: number
-          total: number
+          keterangan: string | null
+          no_faktur: string | null
+          phone_number: string | null
+          source: string | null
+          status: string | null
+          supplier_code: string | null
+          supplier_name: string | null
+          tanggal: string | null
+          telegram_user_id: string | null
+          telegram_username: string | null
+          total: number | null
           updated_at: string | null
         }
         Insert: {
-          amount_paid?: number
           created_at?: string | null
-          created_by?: string | null
-          currency?: string | null
-          customer_id: string
-          discount_total?: number
-          due_date?: string | null
           id?: string
-          issue_date?: string
-          meta?: Json | null
-          notes?: string | null
-          number: string
-          org_id: string
-          pdf_url?: string | null
-          status?: string
-          subtotal?: number
-          tax_total?: number
-          total?: number
+          keterangan?: string | null
+          no_faktur?: string | null
+          phone_number?: string | null
+          source?: string | null
+          status?: string | null
+          supplier_code?: string | null
+          supplier_name?: string | null
+          tanggal?: string | null
+          telegram_user_id?: string | null
+          telegram_username?: string | null
+          total?: number | null
           updated_at?: string | null
         }
         Update: {
-          amount_paid?: number
           created_at?: string | null
-          created_by?: string | null
-          currency?: string | null
-          customer_id?: string
-          discount_total?: number
-          due_date?: string | null
           id?: string
-          issue_date?: string
-          meta?: Json | null
-          notes?: string | null
-          number?: string
-          org_id?: string
-          pdf_url?: string | null
-          status?: string
-          subtotal?: number
-          tax_total?: number
-          total?: number
+          keterangan?: string | null
+          no_faktur?: string | null
+          phone_number?: string | null
+          source?: string | null
+          status?: string | null
+          supplier_code?: string | null
+          supplier_name?: string | null
+          tanggal?: string | null
+          telegram_user_id?: string | null
+          telegram_username?: string | null
+          total?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       kpis: {
         Row: {
@@ -1772,45 +2008,213 @@ export type Database = {
         }
         Relationships: []
       }
+      laporan_roas_excel: {
+        Row: {
+          ADEWAP: number | null
+          HAMARU: number | null
+          MOMLY: number | null
+          MOONA: number | null
+          SGID: number | null
+          SGS: number | null
+          tanggal: string | null
+        }
+        Insert: {
+          ADEWAP?: number | null
+          HAMARU?: number | null
+          MOMLY?: number | null
+          MOONA?: number | null
+          SGID?: number | null
+          SGS?: number | null
+          tanggal?: string | null
+        }
+        Update: {
+          ADEWAP?: number | null
+          HAMARU?: number | null
+          MOMLY?: number | null
+          MOONA?: number | null
+          SGID?: number | null
+          SGS?: number | null
+          tanggal?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           created_at: string
-          domain: string
-          email: string
           id: string
-          ip_address: string | null
-          project: string
-          referrer: string | null
-          source: string
-          updated_at: string
-          user_agent: string | null
-          whatsapp: string | null
+          kontak: string
+          nama: string
+          sumber: string
         }
         Insert: {
           created_at?: string
-          domain: string
-          email: string
           id?: string
-          ip_address?: string | null
-          project: string
-          referrer?: string | null
-          source: string
-          updated_at?: string
-          user_agent?: string | null
-          whatsapp?: string | null
+          kontak: string
+          nama: string
+          sumber?: string
         }
         Update: {
           created_at?: string
-          domain?: string
-          email?: string
           id?: string
-          ip_address?: string | null
-          project?: string
-          referrer?: string | null
+          kontak?: string
+          nama?: string
+          sumber?: string
+        }
+        Relationships: []
+      }
+      leads_capture: {
+        Row: {
+          created_at: string | null
+          email: string
+          email_status: string | null
+          id: string
+          nama: string | null
+          no_hp: string | null
+          notes: string | null
+          product_source: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          email_status?: string | null
+          id?: string
+          nama?: string | null
+          no_hp?: string | null
+          notes?: string | null
+          product_source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          email_status?: string | null
+          id?: string
+          nama?: string | null
+          no_hp?: string | null
+          notes?: string | null
+          product_source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lemon_blog_posts: {
+        Row: {
+          content_html: string
+          created_at: string
+          excerpt: string
+          featured_image_url: string | null
+          id: string
+          keywords: string[] | null
+          meta_description: string | null
+          meta_title: string | null
+          og_image_url: string | null
+          published_at: string | null
+          reading_time_minutes: number | null
+          slug: string
+          source: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          word_count: number | null
+        }
+        Insert: {
+          content_html?: string
+          created_at?: string
+          excerpt?: string
+          featured_image_url?: string | null
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          meta_title?: string | null
+          og_image_url?: string | null
+          published_at?: string | null
+          reading_time_minutes?: number | null
+          slug: string
           source?: string
+          status?: string
+          tags?: string[] | null
+          title: string
           updated_at?: string
-          user_agent?: string | null
-          whatsapp?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          content_html?: string
+          created_at?: string
+          excerpt?: string
+          featured_image_url?: string | null
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          meta_title?: string | null
+          og_image_url?: string | null
+          published_at?: string | null
+          reading_time_minutes?: number | null
+          slug?: string
+          source?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          word_count?: number | null
+        }
+        Relationships: []
+      }
+      master_barang: {
+        Row: {
+          created_at: string | null
+          harga_beli: number | null
+          id: number
+          kategori: string | null
+          kode_barang: string
+          nama_barang: string
+          satuan: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          harga_beli?: number | null
+          id?: number
+          kategori?: string | null
+          kode_barang: string
+          nama_barang: string
+          satuan?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          harga_beli?: number | null
+          id?: number
+          kategori?: string | null
+          kode_barang?: string
+          nama_barang?: string
+          satuan?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      message_templates: {
+        Row: {
+          brand: string
+          created_at: string | null
+          id: number
+          template: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string | null
+          id?: number
+          template: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string | null
+          id?: number
+          template?: string
         }
         Relationships: []
       }
@@ -2066,13 +2470,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "payments_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "payments_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -2080,6 +2477,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      phone_data: {
+        Row: {
+          brand: string | null
+          created_at: string | null
+          followup_scheduled_at: string | null
+          followup_sent_at: string | null
+          followup_status: string | null
+          id: number
+          nama: string | null
+          phone: string | null
+          source: string | null
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string | null
+          followup_scheduled_at?: string | null
+          followup_sent_at?: string | null
+          followup_status?: string | null
+          id?: number
+          nama?: string | null
+          phone?: string | null
+          source?: string | null
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string | null
+          followup_scheduled_at?: string | null
+          followup_sent_at?: string | null
+          followup_status?: string | null
+          id?: number
+          nama?: string | null
+          phone?: string | null
+          source?: string | null
+        }
+        Relationships: []
       }
       price_list_items: {
         Row: {
@@ -2170,6 +2603,81 @@ export type Database = {
           },
         ]
       }
+      produk_ivaron: {
+        Row: {
+          created_at: string | null
+          deskripsi_produk: string | null
+          id: number
+          kode_produk: string
+          nama_produk: string
+          sku_induk: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deskripsi_produk?: string | null
+          id?: number
+          kode_produk: string
+          nama_produk: string
+          sku_induk?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deskripsi_produk?: string | null
+          id?: number
+          kode_produk?: string
+          nama_produk?: string
+          sku_induk?: string | null
+        }
+        Relationships: []
+      }
+      produk_nutiver: {
+        Row: {
+          created_at: string | null
+          id: number
+          kategori: string | null
+          nama_produk: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          kategori?: string | null
+          nama_produk: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          kategori?: string | null
+          nama_produk?: string
+        }
+        Relationships: []
+      }
+      produk_trivico: {
+        Row: {
+          created_at: string | null
+          deskripsi_produk: string | null
+          id: number
+          kode_produk: string
+          nama_produk: string
+          sku_induk: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deskripsi_produk?: string | null
+          id?: number
+          kode_produk: string
+          nama_produk: string
+          sku_induk?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deskripsi_produk?: string | null
+          id?: number
+          kode_produk?: string
+          nama_produk?: string
+          sku_induk?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2233,6 +2741,51 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      roas_daily: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: number
+          roas_value: number
+          toko_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          id?: number
+          roas_value: number
+          toko_name: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: number
+          roas_value?: number
+          toko_name?: string
+        }
+        Relationships: []
+      }
+      roas_targets: {
+        Row: {
+          id: number
+          target_value: number
+          toko_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          target_value?: number
+          toko_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          target_value?: number
+          toko_name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2654,6 +3207,42 @@ export type Database = {
           },
         ]
       }
+      inv_v_master_barang_search: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          harga_beli: number | null
+          id: number | null
+          kategori: string | null
+          kode_barang: string | null
+          nama_barang: string | null
+          satuan: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          harga_beli?: number | null
+          id?: number | null
+          kategori?: string | null
+          kode_barang?: string | null
+          nama_barang?: string | null
+          satuan?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          harga_beli?: number | null
+          id?: number | null
+          kategori?: string | null
+          kode_barang?: string | null
+          nama_barang?: string | null
+          satuan?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_scheduled_posts: {
@@ -2664,10 +3253,27 @@ export type Database = {
           title: string
         }[]
       }
+      check_welcome_sent: {
+        Args: { lead_uuid: string }
+        Returns: {
+          already_sent: boolean
+          email_sequence_number: number
+        }[]
+      }
       cleanup_old_screenshots: { Args: never; Returns: undefined }
       ensure_invoice_sequence: {
         Args: { p_org_id: string; p_period: string }
         Returns: number
+      }
+      get_pending_leads: {
+        Args: never
+        Returns: {
+          created_at: string
+          domain: string
+          email: string
+          email_sequence_number: number
+          id: string
+        }[]
       }
       get_publishing_stats: {
         Args: never
@@ -2678,6 +3284,28 @@ export type Database = {
           published_posts: number
           scheduled_posts: number
           total_posts: number
+        }[]
+      }
+      get_ready_emails: {
+        Args: never
+        Returns: {
+          days_since_last_email: number
+          domain: string
+          email: string
+          email_sequence_number: number
+          id: string
+          last_email_sent_at: string
+        }[]
+      }
+      get_roas_with_target: {
+        Args: { target_date?: string }
+        Returns: {
+          created_at: string
+          date: string
+          id: number
+          roas_value: number
+          target_value: number
+          toko_name: string
         }[]
       }
       nm_match_canvas_index: {
@@ -2712,6 +3340,21 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      unsubscribe_lead: {
+        Args: { unsubscribe_token: string }
+        Returns: {
+          email: string
+          success: boolean
+        }[]
+      }
+      update_lead_email_sent: {
+        Args: { lead_uuid: string; new_sequence: number }
+        Returns: undefined
+      }
+      update_lead_sequence: {
+        Args: { lead_uuid: string; new_sequence: number }
+        Returns: Json
+      }
     }
     Enums: {
       post_status: "draft" | "review" | "scheduled" | "published" | "archived"
