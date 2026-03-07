@@ -908,7 +908,7 @@ const Blog = () => {
       
       try {
         const { data, error } = await supabase
-          .from('blog_posts')
+          .from('storo_blog_posts')
           .select('*')
           .order('published_at', { ascending: false });
 

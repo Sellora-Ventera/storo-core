@@ -49,7 +49,7 @@ serve(async (req) => {
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
     const { data: recentPosts, error: recentError } = await supabase
-      .from('blog_posts')
+      .from('storo_blog_posts')
       .select('id, published_at')
       .gte('published_at', twoDaysAgo.toISOString())
       .order('published_at', { ascending: false })
@@ -248,7 +248,7 @@ serve(async (req) => {
 
     // Check if slug already exists
     const { data: existingPost } = await supabase
-      .from('blog_posts')
+      .from('storo_blog_posts')
       .select('slug')
       .eq('slug', slug)
       .single();
@@ -262,7 +262,7 @@ serve(async (req) => {
 
     // Save to database
     const { data: newPost, error: insertError } = await supabase
-      .from('blog_posts')
+      .from('storo_blog_posts')
       .insert({
         title: articleData.title,
         slug: finalSlug,

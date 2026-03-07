@@ -3047,7 +3047,7 @@ const BlogPost = () => {
     const fetchPost = async () => {
       try {
         // Try to fetch from database by slug first, then by id
-        let query = supabase.from('blog_posts').select('*');
+        let query = supabase.from('storo_blog_posts').select('*');
         
         // Check if id is a UUID or a number
         if (id && id.includes('-')) {
