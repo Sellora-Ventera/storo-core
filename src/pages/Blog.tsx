@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
+import FloatingChatbot from "@/components/FloatingChatbot";
 import { supabase } from "@/integrations/supabase/client";
 import brandingStrategyImg from "@/assets/blog-branding-strategy.jpg";
 import returnRefundImg from "@/assets/blog-return-refund.jpg";
@@ -908,9 +909,9 @@ const Blog = () => {
       
       try {
         const { data, error } = await supabase
-          .from('storo_blog_posts')
+          .from('storo_blog_posts' as any)
           .select('*')
-          .order('published_at', { ascending: false });
+          .order('published_at', { ascending: false }) as any;
 
         console.log('📊 Supabase response:', { data, error });
 
@@ -1144,6 +1145,7 @@ const Blog = () => {
           </div>
         </div>
       </section>
+      <FloatingChatbot />
     </div>
   );
 };

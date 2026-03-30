@@ -9,6 +9,7 @@ import FAQ from "@/components/FAQ";
 import ClosingCTA from "@/components/ClosingCTA";
 import ContactForm from "@/components/ContactForm";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import FloatingChatbot from "@/components/FloatingChatbot";
 import LeadCapturePopup from "@/components/LeadCapturePopup";
 import ExitIntentPopup from "@/components/ExitIntentPopup";
 
@@ -48,6 +49,7 @@ const Index = () => {
         <ContactForm />
         <ClosingCTA />
       </main>
+      <FloatingChatbot />
       <WhatsAppFloat />
       <LeadCapturePopup />
       <ExitIntentPopup />

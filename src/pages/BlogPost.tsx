@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
+import FloatingChatbot from "@/components/FloatingChatbot";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import brandingStrategyImg from "@/assets/blog-branding-strategy.jpg";
@@ -3047,8 +3048,8 @@ const BlogPost = () => {
     const fetchPost = async () => {
       try {
         // Try to fetch from database by slug first, then by id
-        let query = supabase.from('storo_blog_posts').select('*');
-        
+        let query = supabase.from('storo_blog_posts' as any).select('*') as any;
+
         // Check if id is a UUID or a number
         if (id && id.includes('-')) {
           // It's a slug
@@ -3194,6 +3195,7 @@ const BlogPost = () => {
           </div>
         </div>
       </section>
+      <FloatingChatbot />
     </div>
   );
 };

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-blog]
 verify_jwt = false
+
+[functions.chat-storo]
+verify_jwt = false
