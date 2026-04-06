@@ -1,9 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/superadmin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/superadmin"];
 const AUTH_PAGES = ["/sign-in", "/sign-up"];
-const SUPERADMIN_PREFIX = "/superadmin";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
