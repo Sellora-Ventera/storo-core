@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storo.id Marketing Banners</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .banner-container {
+            margin-bottom: 40px;
+            page-break-after: always;
+        }
+
+        .banner {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* Banner 1: Paket Pro - Most Popular */
+        .banner-pro {
+            width: 1080px;
+            height: 1080px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            color: white;
+            text-align: center;
+        }
+
+        .banner-pro .badge {
+            background: #fbbf24;
+            color: #1e293b;
+            padding: 12px 32px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 20px;
+            margin-bottom: 30px;
+        }
+
+        .banner-pro h1 {
+            font-size: 72px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .banner-pro .price {
+            font-size: 96px;
+            font-weight: bold;
+            margin: 30px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .banner-pro .description {
+            font-size: 28px;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .banner-pro .features {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .banner-pro .feature-item {
+            font-size: 24px;
+            margin: 16px 0;
+            text-align: left;
+            display: flex;
+            align-items: center;
+        }
+
+        .banner-pro .feature-item::before {
+            content: "✓";
+            margin-right: 16px;
+            font-size: 28px;
+            color: #10b981;
+        }
+
+        .banner-pro .cta {
+            font-size: 24px;
+            margin-top: 40px;
+            padding: 20px 40px;
+            background: white;
+            color: #6366f1;
+            border-radius: 50px;
+            font-weight: bold;
+        }
+
+        /* Banner 2: Comparison Table */
+        .banner-comparison {
+            width: 1200px;
+            height: 1600px;
+            background: linear-gradient(to bottom, #f8f9ff 0%, #ffffff 100%);
+            padding: 60px;
+        }
+
+        .banner-comparison h1 {
+            font-size: 56px;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .banner-comparison .subtitle {
+            font-size: 24px;
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .package-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 2px solid #e2e8f0;
+        }
+
+        .package-card.popular {
+            border-color: #6366f1;
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+        }
+
+        .package-card .package-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .package-card .package-price {
+            font-size: 40px;
+            font-weight: bold;
+            color: #6366f1;
+            margin-bottom: 15px;
+        }
+
+        .package-card .package-desc {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .package-card .feature-list {
+            list-style: none;
+        }
+
+        .package-card .feature-list li {
+            font-size: 14px;
+            color: #334155;
+            margin: 10px 0;
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .package-card .feature-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .banner-comparison .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: #6366f1;
+            color: white;
+            border-radius: 16px;
+        }
+
+        .banner-comparison .footer h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        .banner-comparison .footer p {
+            font-size: 20px;
+            margin: 8px 0;
+        }
+
+        /* Banner 3: Quick Info - WhatsApp Ready */
+        .banner-whatsapp {
+            width: 1080px;
+            height: 1920px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 80px 60px;
+            color: white;
+        }
+
+        .banner-whatsapp .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .banner-whatsapp .logo {
+            font-size: 64px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .banner-whatsapp h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .banner-whatsapp .tagline {
+            font-size: 28px;
+            opacity: 0.9;
+        }
+
+        .info-section {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px;
+            margin: 30px 0;
+        }
+
+        .info-section h2 {
+            font-size: 36px;
+            margin-bottom: 25px;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 15px;
+        }
+
+        .info-section .info-item {
+            font-size: 24px;
+            margin: 20px 0;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .info-section .info-item::before {
+            content: "→";
+            margin-right: 16px;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .highlight-box {
+            background: white;
+            color: #1e293b;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        .highlight-box h3 {
+            font-size: 32px;
+            color: #10b981;
+            margin-bottom: 20px;
+        }
+
+        .highlight-box p {
+            font-size: 24px;
+            margin: 12px 0;
+        }
+
+        .banner-whatsapp .contact {
+            text-align: center;
+            margin-top: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 40px;
+            border-radius: 24px;
+        }
+
+        .banner-whatsapp .contact h3 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .banner-whatsapp .contact .phone {
+            font-size: 40px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        /* Banner 4: FAQ Quick Reference */
+        .banner-faq {
+            width: 1080px;
+            height: 1920px;
+            background: #f8f9ff;
+            padding: 60px;
+        }
+
+        .banner-faq .header {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .banner-faq .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .faq-item .question {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .faq-item .question::before {
+            content: "Q:";
+            color: #6366f1;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .faq-item .answer {
+            font-size: 20px;
+            color: #334155;
+            line-height: 1.6;
+            padding-left: 40px;
+        }
+
+        .banner-faq .footer {
+            background: #10b981;
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .banner-faq .footer h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        .banner-faq .footer p {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .instructions {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .instructions h2 {
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+
+        .instructions p {
+            color: #78350f;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h2>📸 Cara Screenshot Banners untuk WhatsApp:</h2>
+        <p>
+            1. Buka file HTML ini di browser Chrome/Firefox<br>
+            2. Klik kanan pada setiap banner → "Inspect Element"<br>
+            3. Klik kanan pada element banner → "Capture node screenshot"<br>
+            4. Atau gunakan Windows Snipping Tool (Windows + Shift + S) untuk screenshot manual<br>
+            5. Save sebagai JPG dengan nama yang sesuai<br>
+            <br>
+            <strong>Alternative:</strong> Install browser extension "GoFullPage" atau "Full Page Screen Capture" untuk screenshot otomatis
+        </p>
+    </div>
+
+    <!-- Banner 1: Paket Pro Highlight -->
+    <div class="banner-container">
+        <h2 style="text-align: center; color: #1e293b; margin-bottom: 20px;">Banner 1: Paket Pro (Most Popular) - 1080x1080px</h2>
+        <div class="banner banner-pro">
+            <div class="badge">⭐ PALING POPULER</div>
+            <h1>Paket PRO</h1>
+            <div class="price">Rp2,5 Juta</div>
+            <div class="description">Setup webstore profesional untuk seller aktif</div>
+
+            <div class="features">
+                <div class="feature-item">Setup webstore + 200 SKU</div>
+                <div class="feature-item">AI rewrite judul & deskripsi produk</div>
+                <div class="feature-item">WooCommerce untuk order processing</div>
+                <div class="feature-item">Free domain 1 tahun</div>
+                <div class="feature-item">Template custom design</div>
+                <div class="feature-item">Priority support</div>
+            </div>
+
+            <div class="cta">💬 Chat via WhatsApp: 0856-4748-6700</div>
+        </div>
+    </div>
+
+    <!-- Banner 2: Comparison Table -->
+    <div class="banner-container">
+        <h2 style="text-align: center; color: #1e293b; margin-bottom: 20px;">Banner 2: Perbandingan Paket - 1200x1600px</h2>
+        <div class="banner banner-comparison">
+            <h1>Paket Harga <span style="color: #6366f1;">Transparan</span></h1>
+            <div class="subtitle">Pilih paket yang sesuai dengan kebutuhan bisnis Anda</div>
+
+            <div class="comparison-grid">
+                <div class="package-card">
+                    <div class="package-name">Starter</div>
+                    <div class="package-price">Rp1,5 Juta</div>
+                    <div class="package-desc">Untuk bisnis yang baru mulai</div>
+                    <ul class="feature-list">
+                        <li>Setup webstore + 100 SKU</li>
+                        <li>Integrasi payment & ongkir</li>
+                        <li>WooCommerce</li>
+                        <li>Free support 1 bulan</li>
+                        <li>Training dasar</li>
+                    </ul>
+                </div>
+
+                <div class="package-card popular">
+                    <div style="background: #6366f1; color: white; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-size: 14px; font-weight: bold;">⭐ PALING POPULER</div>
+                    <div class="package-name">Pro</div>
+                    <div class="package-price">Rp2,5 Juta</div>
+                    <div class="package-desc">Seller aktif</div>
+                    <ul class="feature-list">
+                        <li>Setup + 200 SKU</li>
+                        <li>AI rewrite produk</li>
+                        <li>WooCommerce</li>
+                        <li>Free domain 1 tahun</li>
+                        <li>Custom design</li>
+                        <li>Priority support</li>
+                    </ul>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-name">Advance</div>
+                    <div class="package-price">Rp3,5 Juta</div>
+                    <div class="package-desc">Volume tinggi</div>
+                    <ul class="feature-list">
+                        <li>Setup + 1000 SKU</li>
+                        <li>AI rewrite produk</li>
+                        <li>WooCommerce</li>
+                        <li>Free domain 1 tahun</li>
+                        <li>Custom design</li>
+                        <li>Priority support</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; margin-top: 30px;">
+                <div class="package-card">
+                    <div class="package-name">Flexible</div>
+                    <div class="package-price">Rp5 Juta</div>
+                    <div class="package-desc">Hosting sendiri</div>
+                    <ul class="feature-list">
+                        <li>Setup di hosting customer</li>
+                        <li>Domain customer</li>
+                        <li>Custom design</li>
+                        <li>Tanpa maintenance</li>
+                        <li>Lifetime use</li>
+                    </ul>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-name">Custom</div>
+                    <div class="package-price">Custom Price</div>
+                    <div class="package-desc">Solusi khusus</div>
+                    <ul class="feature-list">
+                        <li>SKU unlimited</li>
+                        <li>Custom features</li>
+                        <li>SLA 2 jam</li>
+                        <li>Marketing automation</li>
+                        <li>Account manager</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer">
+                <h3>💬 Konsultasi Gratis</h3>
+                <p>WhatsApp: 0856-4748-6700</p>
+                <p>www.storo.id</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner 3: WhatsApp Story Format -->
+    <div class="banner-container">
+        <h2 style="text-align: center; color: #1e293b; margin-bottom: 20px;">Banner 3: WhatsApp Story Ready - 1080x1920px</h2>
+        <div class="banner banner-whatsapp">
+            <div class="header">
+                <div class="logo">STORO.ID</div>
+                <h1>Solusi Webstore untuk Seller Marketplace</h1>
+                <div class="tagline">Dari Toko Online ke Toko Profesional</div>
+            </div>
+
+            <div class="info-section">
+                <h2>✨ Kenapa Pilih Storo.id?</h2>
+                <div class="info-item">Setup cepat - webstore siap dalam hitungan hari</div>
+                <div class="info-item">Teknologi terkini dengan WooCommerce & AI</div>
+                <div class="info-item">Support tim berpengalaman</div>
+                <div class="info-item">Harga transparan tanpa biaya tersembunyi</div>
+                <div class="info-item">Maintenance & update rutin</div>
+            </div>
+
+            <div class="highlight-box">
+                <h3>🎯 Paket Mulai Dari</h3>
+                <p style="font-size: 48px; font-weight: bold; color: #6366f1;">Rp1,5 Juta</p>
+                <p>Setup lengkap + Support profesional</p>
+            </div>
+
+            <div class="info-section">
+                <h2>🚀 Yang Anda Dapat:</h2>
+                <div class="info-item">Webstore profesional siap pakai</div>
+                <div class="info-item">Integrasi payment gateway</div>
+                <div class="info-item">Sistem ongkir otomatis</div>
+                <div class="info-item">Order processing WooCommerce</div>
+                <div class="info-item">AI untuk optimasi produk</div>
+                <div class="info-item">Training & dokumentasi lengkap</div>
+            </div>
+
+            <div class="contact">
+                <h3>📱 Hubungi Kami</h3>
+                <div class="phone">0856-4748-6700</div>
+                <p style="font-size: 24px;">www.storo.id</p>
+                <p style="font-size: 20px; margin-top: 20px;">Chat sekarang untuk konsultasi gratis!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner 4: FAQ Quick Reference -->
+    <div class="banner-container">
+        <h2 style="text-align: center; color: #1e293b; margin-bottom: 20px;">Banner 4: FAQ untuk Customer - 1080x1920px</h2>
+        <div class="banner banner-faq">
+            <div class="header">
+                <h1>❓ Pertanyaan Umum</h1>
+                <p style="font-size: 20px; margin-top: 10px;">Tentang Storo.id</p>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Berapa lama setup webstore?</div>
+                <div class="answer">Setup webstore biasanya selesai dalam 3-7 hari kerja, tergantung kompleksitas dan jumlah SKU yang di-upload.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Apakah ada biaya tambahan?</div>
+                <div class="answer">Harga sudah all-in untuk setup. Biaya maintenance Rp200rb/bulan (kecuali paket Flexible & Custom).</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Bisa integrasi dengan marketplace?</div>
+                <div class="answer">Ya, webstore bisa terintegrasi dengan Tokopedia, Shopee, dan marketplace lainnya untuk sinkronisasi stok.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Payment gateway apa yang didukung?</div>
+                <div class="answer">Kami support Midtrans, Xendit, dan payment gateway lokal lainnya untuk pembayaran online.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Apakah ada training setelah setup?</div>
+                <div class="answer">Ya! Semua paket include training penggunaan dasar. Paket Pro ke atas dapat training lebih lengkap.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Domain & hosting dari mana?</div>
+                <div class="answer">Kami sediakan hosting berkualitas. Domain bisa dari kami (paket Pro+) atau domain sendiri (Flexible).</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="question">Bagaimana dengan SEO?</div>
+                <div class="answer">Template kami sudah SEO-friendly. Paket Pro+ include AI rewrite untuk optimasi konten produk.</div>
+            </div>
+
+            <div class="footer">
+                <h3>💬 Masih Ada Pertanyaan?</h3>
+                <p>WhatsApp: 0856-4748-6700</p>
+                <p style="font-size: 18px; margin-top: 15px;">www.storo.id</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner 5: Promo/CTA Banner -->
+    <div class="banner-container">
+        <h2 style="text-align: center; color: #1e293b; margin-bottom: 20px;">Banner 5: Call to Action - 1080x1080px</h2>
+        <div class="banner banner-pro" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);">
+            <h1 style="font-size: 64px;">🎉 PROMO SPESIAL</h1>
+            <div style="font-size: 36px; margin: 30px 0;">Konsultasi Gratis + Diskon Setup</div>
+
+            <div style="background: white; color: #1e293b; padding: 50px; border-radius: 24px; margin: 40px 0; width: 100%; max-width: 800px;">
+                <div style="font-size: 28px; margin-bottom: 20px;">Dapatkan:</div>
+                <div style="font-size: 32px; font-weight: bold; color: #ec4899; margin: 15px 0;">✓ Analisis bisnis gratis</div>
+                <div style="font-size: 32px; font-weight: bold; color: #ec4899; margin: 15px 0;">✓ Rekomendasi paket terbaik</div>
+                <div style="font-size: 32px; font-weight: bold; color: #ec4899; margin: 15px 0;">✓ Demo webstore</div>
+                <div style="font-size: 32px; font-weight: bold; color: #ec4899; margin: 15px 0;">✓ Estimasi ROI</div>
+            </div>
+
+            <div style="font-size: 48px; font-weight: bold; background: white; color: #ec4899; padding: 30px 60px; border-radius: 50px; margin-top: 40px;">
+                CHAT SEKARANG!
+            </div>
+            <div style="font-size: 40px; font-weight: bold; margin-top: 30px;">📱 0856-4748-6700</div>
+        </div>
+    </div>
+
+</body>
+</html>

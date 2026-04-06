@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "WebFetch(domain:context7.com)",
+      "Bash(grep -r \"useEffect\\\\|useState\\\\|useQuery\\\\|useMutation\" /d/VenteraAI/Workspace/Git/storo-id-landingpage-wt-main/src/components/*.tsx)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm run:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
