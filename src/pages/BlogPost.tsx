@@ -1,4 +1,6 @@
-import { useParams, Link } from "react-router-dom";
+"use client";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, ArrowLeft } from "lucide-react";
@@ -3040,7 +3042,8 @@ const blogPosts = [
 ];
 
 const BlogPost = () => {
-  const { id } = useParams();
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -3108,7 +3111,7 @@ const BlogPost = () => {
         <Header />
         <div className="pt-24 pb-16 text-center">
           <h1 className="text-4xl font-bold text-foreground mb-4">Artikel Tidak Ditemukan</h1>
-          <Link to="/blog">
+          <Link href="/blog">
             <Button className="btn-hero">Kembali ke Blog</Button>
           </Link>
         </div>
@@ -3128,7 +3131,7 @@ const BlogPost = () => {
       {/* Hero Section */}
       <section className="pt-24 pb-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <Link to="/blog" className="inline-flex items-center text-primary hover:text-primary/80 transition-colors mb-6">
+          <Link href="/blog" className="inline-flex items-center text-primary hover:text-primary/80 transition-colors mb-6">
             <ArrowLeft size={20} className="mr-2" />
             Kembali ke Blog
           </Link>

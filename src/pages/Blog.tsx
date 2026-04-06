@@ -1,5 +1,6 @@
+"use client";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, User, ArrowRight } from "lucide-react";
@@ -1107,7 +1108,7 @@ const Blog = () => {
                       <User size={14} />
                       <span>{post.author}</span>
                     </div>
-                    <Link to={`/blog/${post.slug || post.id}`}>
+                    <Link href={`/blog/${post.slug || post.id}`}>
                       <Button variant="ghost" size="sm" className="text-primary hover:text-primary group-hover:translate-x-1 transition-all duration-200">
                         Baca Selengkapnya
                         <ArrowRight size={14} className="ml-1" />
@@ -1136,7 +1137,7 @@ const Blog = () => {
               <Button onClick={handleWhatsApp} className="btn-hero">
                 Konsultasi Gratis via WhatsApp
               </Button>
-              <Link to="/">
+              <Link href="/">
                 <Button variant="outline" className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
                   Kembali ke Beranda
                 </Button>

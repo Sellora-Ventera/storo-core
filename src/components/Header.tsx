@@ -1,12 +1,16 @@
+"use client";
+
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import storoLogo from "@/assets/storo-logo.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
+  const pathname = usePathname();
 
   const navigation = [
     { name: "Beranda", href: "/" },
@@ -16,34 +20,29 @@ const Header = () => {
   ];
 
   const isActive = (href: string) => {
-    if (href === "/") {
-      return location.pathname === "/";
-    }
-    if (href.startsWith("/#")) {
-      return location.pathname === "/" && location.hash === href.substring(1);
-    }
-    return location.pathname.startsWith(href);
+    if (href === "/") return pathname === "/";
+    if (href.startsWith("/#")) return false;
+    return pathname.startsWith(href);
   };
 
   const handleNavClick = (href: string) => {
     if (href.startsWith("/#")) {
-      const section = href.substring(2); // Remove "/#"
-      if (location.pathname !== "/") {
-        // If not on home page, navigate to home then scroll
+      const section = href.substring(2);
+      if (pathname !== "/") {
         window.location.href = href;
       } else {
-        // If on home page, just scroll to section
         const element = document.getElementById(section);
         if (element) {
           element.scrollIntoView({ behavior: "smooth" });
         }
       }
     }
+    setIsMenuOpen(false);
   };
 
   const handleWhatsApp = () => {
     const message = "Halo Storo.id, saya ingin konsultasi tentang jasa setup webstore dari Shopee";
-    window.open(`https://wa.me/6285148416700?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/6285148416700?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   return (
@@ -51,43 +50,39 @@ const Header = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <img 
-              src={storoLogo} 
-              alt="Storo.id Logo" 
+          <Link href="/" className="flex items-center space-x-3">
+            <Image
+              src={storoLogo}
+              alt="Storo.id Logo"
               className="h-10 w-auto object-contain"
+              height={40}
+              priority
             />
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
+            {navigation.map((item) =>
               item.href.startsWith("/#") ? (
                 <button
                   key={item.name}
                   onClick={() => handleNavClick(item.href)}
-                  className={`font-medium transition-colors duration-200 ${
-                    isActive(item.href)
-                      ? "text-primary"
-                      : "text-foreground hover:text-primary"
-                  }`}
+                  className="font-medium transition-colors duration-200 text-foreground hover:text-primary"
                 >
                   {item.name}
                 </button>
               ) : (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  href={item.href}
                   className={`font-medium transition-colors duration-200 ${
-                    isActive(item.href)
-                      ? "text-primary"
-                      : "text-foreground hover:text-primary"
+                    isActive(item.href) ? "text-primary" : "text-foreground hover:text-primary"
                   }`}
                 >
                   {item.name}
                 </Link>
               )
-            ))}
+            )}
             <Button onClick={handleWhatsApp} className="btn-hero">
               Konsultasi Gratis
             </Button>
@@ -108,26 +103,19 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-background border-t border-border">
-              {navigation.map((item) => (
+              {navigation.map((item) =>
                 item.href.startsWith("/#") ? (
                   <button
                     key={item.name}
-                    onClick={() => {
-                      handleNavClick(item.href);
-                      setIsMenuOpen(false);
-                    }}
-                    className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      isActive(item.href)
-                        ? "text-primary bg-muted"
-                        : "text-foreground hover:text-primary hover:bg-muted"
-                    }`}
+                    onClick={() => handleNavClick(item.href)}
+                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-foreground hover:text-primary hover:bg-muted transition-colors"
                   >
                     {item.name}
                   </button>
                 ) : (
                   <Link
                     key={item.name}
-                    to={item.href}
+                    href={item.href}
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                       isActive(item.href)
                         ? "text-primary bg-muted"
@@ -138,7 +126,7 @@ const Header = () => {
                     {item.name}
                   </Link>
                 )
-              ))}
+              )}
               <div className="px-3 py-2">
                 <Button onClick={handleWhatsApp} className="btn-hero w-full">
                   Konsultasi Gratis
