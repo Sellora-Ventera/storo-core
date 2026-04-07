@@ -1,24 +1,36 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
-// Dynamically import PDFDownloadLink to prevent SSR issues
-const PDFDownloadLink = dynamic(
-  () => import("@react-pdf/renderer").then((mod) => mod.PDFDownloadLink),
-  { ssr: false }
-);
-
-const CatalogPDF = dynamic(() => import("./CatalogPDF"), { ssr: false });
-
 const DownloadCatalog = () => {
+  const [PDFDownloadLink, setPDFDownloadLink] = useState<any>(null);
+  const [CatalogPDF, setCatalogPDF] = useState<any>(null);
+
+  useEffect(() => {
+    import("@react-pdf/renderer").then((mod) => {
+      setPDFDownloadLink(() => mod.PDFDownloadLink);
+    });
+    import("./CatalogPDF").then((mod) => {
+      setCatalogPDF(() => mod.default);
+    });
+  }, []);
+
+  if (!PDFDownloadLink || !CatalogPDF) {
+    return (
+      <div className="text-center mt-8">
+        <Button className="btn-outline" disabled>
+          <Download className="w-4 h-4 mr-2" />
+          Memuat PDF...
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="text-center mt-8">
-      <PDFDownloadLink
-        document={<CatalogPDF />}
-        fileName="Katalog_Produk_Storo.pdf"
-      >
+      <PDFDownloadLink document={<CatalogPDF />} fileName="Katalog_Produk_Storo.pdf">
         {({ loading }: { loading: boolean }) => (
           <Button className="btn-outline" disabled={loading}>
             <Download className="w-4 h-4 mr-2" />
