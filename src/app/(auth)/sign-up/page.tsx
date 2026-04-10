@@ -221,6 +221,13 @@ export default function SignUpPage() {
           </Link>{" "}
           kami.
         </p>
+
+        <p className="text-sm text-gray-500 text-center mt-4">
+          Mau langsung pesan toko?{" "}
+          <Link href="/onboarding" className="text-primary font-medium hover:underline">
+            Pesan di sini
+          </Link>
+        </p>
       </div>
     </div>
   );

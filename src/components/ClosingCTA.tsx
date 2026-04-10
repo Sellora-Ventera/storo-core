@@ -16,12 +16,12 @@ const ClosingCTA = () => {
           </p>
 
           <div className="space-y-4 md:space-y-0 md:space-x-6 md:flex md:justify-center md:items-center">
-            <Button 
+            <Button
+              asChild
               size="lg"
               className="bg-white text-primary hover:bg-gray-100 font-bold text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              onClick={() => window.open('https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20siap%20mulai%20buat%20webstore!', '_blank')}
             >
-              Hubungi via WhatsApp Sekarang
+              <a href="/onboarding">Pesan Toko Sekarang</a>
             </Button>
           </div>
 

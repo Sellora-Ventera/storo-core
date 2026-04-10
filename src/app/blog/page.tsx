@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import BlogPage from "@/pages/Blog";
+import BlogPage from "@/page-components/Blog";
 
 export const metadata: Metadata = {
   title: "Blog — Tips & Strategi E-commerce untuk Seller Shopee",

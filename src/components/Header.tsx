@@ -40,11 +40,6 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  const handleWhatsApp = () => {
-    const message = "Halo Storo.id, saya ingin konsultasi tentang jasa setup webstore dari Shopee";
-    window.open(`https://wa.me/6285148416700?text=${encodeURIComponent(message)}`, "_blank");
-  };
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -83,8 +78,8 @@ const Header = () => {
                 </Link>
               )
             )}
-            <Button onClick={handleWhatsApp} className="btn-hero">
-              Konsultasi Gratis
+            <Button asChild className="btn-hero">
+              <Link href="/onboarding">Pesan Toko</Link>
             </Button>
           </nav>
 
@@ -128,8 +123,8 @@ const Header = () => {
                 )
               )}
               <div className="px-3 py-2">
-                <Button onClick={handleWhatsApp} className="btn-hero w-full">
-                  Konsultasi Gratis
+                <Button asChild className="btn-hero w-full">
+                  <Link href="/onboarding">Pesan Toko</Link>
                 </Button>
               </div>
             </div>

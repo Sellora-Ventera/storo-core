@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, X, ChevronRight, MessageCircle } from "lucide-react";
+import { PLANS, formatIDR } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Harga Paket - Storo.id",
@@ -12,23 +13,13 @@ export const metadata: Metadata = {
 const WA_NUMBER = "6285157406969";
 const WA_LINK = `https://wa.me/${WA_NUMBER}`;
 
-function formatIDR(amount: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
-
-type FeatureStatus = boolean | "custom";
-
-interface Plan {
+// Extend shared Plan with pricing-page-specific CTA config
+interface PricingPlan {
   id: string;
   name: string;
   setup: number | null;
   monthly: number | null;
   monthlyLabel?: string;
-  setupLabel?: string;
   popular?: boolean;
   enterprise?: boolean;
   ctaLabel: string;
@@ -36,53 +27,18 @@ interface Plan {
   ctaVariant?: "primary" | "outline" | "wa";
 }
 
-const plans: Plan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    setup: 1500000,
-    monthly: 250000,
-    ctaLabel: "Mulai Sekarang",
-    ctaHref: "/sign-up",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    setup: 3500000,
-    monthly: 500000,
-    popular: true,
-    ctaLabel: "Mulai Sekarang",
-    ctaHref: "/sign-up",
-    ctaVariant: "primary",
-  },
-  {
-    id: "advance",
-    name: "Advance",
-    setup: 7500000,
-    monthly: 1000000,
-    ctaLabel: "Mulai Sekarang",
-    ctaHref: "/sign-up",
-  },
-  {
-    id: "flexible",
-    name: "Flexible",
-    setup: 5000000,
-    monthly: 750000,
-    ctaLabel: "Mulai Sekarang",
-    ctaHref: "/sign-up",
-  },
-  {
-    id: "custom",
-    name: "Custom",
-    setup: null,
-    monthly: null,
-    monthlyLabel: "Hubungi Kami",
-    enterprise: true,
-    ctaLabel: "Hubungi Kami",
-    ctaHref: WA_LINK,
-    ctaVariant: "wa",
-  },
-];
+const plans: PricingPlan[] = PLANS.map((p) => ({
+  id: p.id,
+  name: p.name,
+  setup: p.setup,
+  monthly: p.monthly,
+  monthlyLabel: p.monthlyLabel,
+  popular: p.popular,
+  enterprise: p.enterprise,
+  ctaLabel: p.enterprise ? "Hubungi Kami" : "Pesan Sekarang",
+  ctaHref: p.enterprise ? WA_LINK : `/onboarding?plan=${p.id}`,
+  ctaVariant: p.enterprise ? "wa" as const : p.popular ? "primary" as const : "outline" as const,
+}));
 
 interface Feature {
   label: string;
@@ -233,7 +189,7 @@ function PlanFeatureIcon({ active }: { active: boolean }) {
   return <X className="w-4 h-4 text-gray-300 flex-shrink-0" />;
 }
 
-function getPlanFeature(plan: Plan, feature: Feature): boolean {
+function getPlanFeature(plan: PricingPlan, feature: Feature): boolean {
   return feature[plan.id as keyof Omit<Feature, "label">] as boolean;
 }
 

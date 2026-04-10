@@ -94,7 +94,7 @@ const Problem = () => {
             <span className="text-gray-900 font-semibold">Ada cara yang lebih masuk akal.</span>
           </p>
           <Button asChild className="btn-hero gap-2 cursor-pointer">
-            <Link href="/sign-up">
+            <Link href="/onboarding">
               Lihat Solusinya
               <ArrowRight className="w-4 h-4" />
             </Link>

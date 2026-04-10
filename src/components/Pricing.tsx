@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import DownloadCatalog from "./DownloadCatalog";
@@ -123,29 +124,20 @@ const Pricing = () => {
               </div>
 
               <Button
-                className={`w-full ${pkg.popular ? "btn-hero" : "btn-outline"}`}
-                  onClick={() =>
-                  window.open(
-                    `https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20tertarik%20dengan%20paket%20${pkg.name}`,
-                    "_blank",
-                  )
-                }
+                asChild
+                className={`w-full cursor-pointer ${pkg.popular ? "btn-hero" : "btn-outline"}`}
               >
-                Pilih Paket {pkg.name}
+                <Link href={`/onboarding?plan=${pkg.name.toLowerCase()}`}>
+                  Pilih Paket {pkg.name}
+                </Link>
               </Button>
             </div>
           ))}
         </div>
 
         <div className="text-center mt-12">
-          <Button
-            size="lg"
-            className="btn-hero"
-            onClick={() =>
-              window.open("https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20pesan%20webstore", "_blank")
-            }
-          >
-            Pesan Sekarang via WhatsApp
+          <Button asChild size="lg" className="btn-hero">
+            <Link href="/onboarding">Pesan Sekarang</Link>
           </Button>
           <DownloadCatalog />
         </div>
