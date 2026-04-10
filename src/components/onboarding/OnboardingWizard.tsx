@@ -35,12 +35,13 @@ type State = {
   plan: PlanId | "";
   // Step 2: Domain
   websiteName: string; // slug for <slug>.storo.id
-  selectedDomain: string; // custom domain dipilih user (kosong = subdomain gratis saja)
   // Step 3: Profile
   fullName: string;
+  storeName: string;
   phone: string;
   shopeeStoreLink: string;
   // Step 4: Account
+  authMethod: "email" | "google" | "";
   email: string;
   password: string;
   // Step 5: Summary & pay
@@ -94,11 +95,12 @@ export default function OnboardingWizard() {
   const [state, dispatch] = useReducer(reducer, {
     step: 1,
     plan: "",
-    fullName: "",
     websiteName: "",
-    selectedDomain: "",
+    fullName: "",
+    storeName: "",
     phone: "",
     shopeeStoreLink: "",
+    authMethod: "",
     email: "",
     password: "",
     invoiceId: "",
@@ -343,9 +345,14 @@ function Step2Domain({
   const [searched, setSearched] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
+
   const handleChange = (value: string) => {
     const slug = slugify(value);
-    update({ websiteName: slug, selectedDomain: "" });
+    update({ websiteName: slug });
     setError("");
 
     // Auto-search after typing stops
@@ -418,54 +425,38 @@ function Step2Domain({
 
         {searched && !searching && results.length > 0 && (
           <div>
-            <p className="text-xs text-gray-500 mb-2 font-medium">Pilih domain untuk toko kamu</p>
+            <p className="text-xs text-gray-500 mb-2 font-medium">Mau custom domain? Cek ketersediaan:</p>
             <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
-              {results.map((r) => {
-                const isSelected = r.available && state.selectedDomain === r.fullDomain;
-                return (
-                  <div
-                    key={r.fullDomain}
-                    onClick={() => {
-                      if (!r.available) return;
-                      update({ selectedDomain: isSelected ? "" : r.fullDomain });
-                    }}
-                    className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                      r.available
-                        ? isSelected
-                          ? "bg-primary/5 border-l-2 border-primary cursor-pointer"
-                          : "bg-white hover:bg-gray-50 cursor-pointer"
-                        : "bg-gray-50 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {r.available ? (
-                        <CheckCircle2 className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-green-500"}`} />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-gray-300 shrink-0" />
-                      )}
-                      <span className={r.available ? `font-medium ${isSelected ? "text-primary" : "text-gray-900"}` : "text-gray-400"}>
-                        {r.fullDomain}
-                      </span>
-                      {isSelected && (
-                        <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full font-semibold">Dipilih</span>
-                      )}
-                    </div>
+              {results.map((r) => (
+                <div
+                  key={r.fullDomain}
+                  className={`flex items-center justify-between px-4 py-2.5 text-sm ${
+                    r.available ? "bg-white" : "bg-gray-50 opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
                     {r.available ? (
-                      <div className="text-right flex items-center gap-1.5">
-                        <span className="text-gray-400 text-xs line-through">{formatIDR(r.price)}/thn</span>
-                        <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-semibold">FREE</span>
-                      </div>
+                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                     ) : (
-                      <span className="text-[10px] text-red-400 font-medium">Tidak tersedia</span>
+                      <AlertCircle className="w-4 h-4 text-gray-300 shrink-0" />
                     )}
+                    <span className={r.available ? "text-gray-900 font-medium" : "text-gray-400"}>
+                      {r.fullDomain}
+                    </span>
                   </div>
-                );
-              })}
+                  {r.available ? (
+                    <div className="text-right">
+                      <span className="text-primary font-semibold text-sm">{formatIDR(r.price)}</span>
+                      <span className="text-gray-400 text-[10px]">/thn</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-red-400 font-medium">Tidak tersedia</span>
+                  )}
+                </div>
+              ))}
             </div>
             <p className="text-[11px] text-gray-400 mt-2">
-              {state.selectedDomain
-                ? `Domain ${state.selectedDomain} akan diproses setelah pembayaran.`
-                : "Custom domain bisa ditambahkan nanti dari dashboard. Lanjutkan dulu dengan subdomain gratis."}
+              Custom domain bisa ditambahkan nanti dari dashboard. Lanjutkan dulu dengan subdomain gratis.
             </p>
           </div>
         )}
@@ -509,6 +500,7 @@ function Step3Profile({
   const validate = () => {
     const e: Record<string, string> = {};
     if (!state.fullName.trim()) e.fullName = "Nama wajib diisi";
+    if (!state.storeName.trim()) e.storeName = "Nama toko wajib diisi";
     if (!state.phone.trim()) {
       e.phone = "Nomor WhatsApp wajib diisi";
     } else if (!/^(08|\+62)/.test(state.phone.trim())) {
@@ -540,6 +532,18 @@ function Step3Profile({
             placeholder="Nama Anda"
           />
           {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
+        </div>
+
+        {/* Store name */}
+        <div className="space-y-1.5">
+          <Label htmlFor="storeName">Nama Toko <span className="text-red-500">*</span></Label>
+          <Input
+            id="storeName"
+            value={state.storeName}
+            onChange={(e) => update({ storeName: e.target.value })}
+            placeholder="contoh: Toko Serba Ada"
+          />
+          {errors.storeName && <p className="text-red-500 text-xs">{errors.storeName}</p>}
         </div>
 
         {/* WhatsApp */}
@@ -662,7 +666,7 @@ function Step4Account({
     const height = 600;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
-    window.open(
+    const popup = window.open(
       data.url,
       "google-auth",
       `width=${width},height=${height},left=${left},top=${top},popup=yes`
@@ -672,20 +676,36 @@ function Step4Account({
     const handler = async (event: MessageEvent) => {
       if (event.origin !== location.origin) return;
       if (event.data?.type === "AUTH_COMPLETE") {
-        window.removeEventListener("message", handler);
+        cleanup();
         const { data: session } = await supabase.auth.getSession();
         if (session?.session?.user) {
-          update({ email: session.session.user.email || "" });
+          update({
+            email: session.session.user.email || "",
+            authMethod: "google",
+          });
           onNext();
         }
         setGoogleLoading(false);
       } else if (event.data?.type === "AUTH_FAILED") {
-        window.removeEventListener("message", handler);
+        cleanup();
         setErrors({ email: "Google sign-in gagal. Coba lagi." });
         setGoogleLoading(false);
       }
     };
     window.addEventListener("message", handler);
+
+    // Fallback: poll for popup manually closed without postMessage
+    const pollClosed = setInterval(() => {
+      if (popup?.closed) {
+        cleanup();
+        setGoogleLoading(false);
+      }
+    }, 500);
+
+    function cleanup() {
+      window.removeEventListener("message", handler);
+      clearInterval(pollClosed);
+    }
   };
 
   return (
@@ -816,11 +836,12 @@ function Step5Summary({
           fullName: state.fullName,
           phone: state.phone,
           shopeeStoreLink: state.shopeeStoreLink,
-          storeName: state.websiteName,
+          storeName: state.storeName,
           plan: state.plan,
-          selectedDomain: state.selectedDomain || `${state.websiteName}.storo.id`,
+          selectedDomain: `${state.websiteName}.storo.id`,
           email: state.email,
-          password: state.password,
+          password: state.authMethod === "google" ? undefined : state.password,
+          authMethod: state.authMethod || "email",
           referralCode: referralCode || undefined,
         }),
       });
@@ -859,7 +880,8 @@ function Step5Summary({
       {/* Summary card */}
       <div className="bg-gray-50 rounded-xl p-5 space-y-3">
         <SummaryRow label="Nama" value={state.fullName} />
-        <SummaryRow label="Website" value={state.selectedDomain || `${state.websiteName}.storo.id`} />
+        <SummaryRow label="Nama Toko" value={state.storeName} />
+        <SummaryRow label="Website" value={`${state.websiteName}.storo.id`} />
         <SummaryRow label="WhatsApp" value={state.phone} />
         <SummaryRow label="Email" value={state.email} />
         {state.shopeeStoreLink && <SummaryRow label="Shopee" value={state.shopeeStoreLink} />}
@@ -881,7 +903,7 @@ function Step5Summary({
 
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">Domain</span>
-          <span className="text-sm font-medium text-gray-900">{state.selectedDomain || `${state.websiteName}.storo.id`}</span>
+          <span className="text-sm font-medium text-gray-900">{state.websiteName}.storo.id</span>
         </div>
 
         <div className="border-t border-gray-200 pt-3 mt-3" />

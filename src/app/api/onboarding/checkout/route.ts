@@ -31,8 +31,11 @@ export async function POST(request: NextRequest) {
       selectedDomain,
       email,
       password,
+      authMethod,
       referralCode,
     } = body;
+
+    const isGoogleAuth = authMethod === "google";
 
     // ── Validate required fields ──────────────────────────────────
     if (!fullName?.trim()) {
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (!email?.trim()) {
       return NextResponse.json({ error: "Email wajib diisi." }, { status: 400 });
     }
-    if (!password || password.length < 8) {
+    if (!isGoogleAuth && (!password || password.length < 8)) {
       return NextResponse.json({ error: "Password minimal 8 karakter." }, { status: 400 });
     }
     if (!planId?.trim()) {
@@ -61,33 +64,62 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    // ── Create Supabase Auth user ─────────────────────────────────
-    // admin.createUser will error if email already exists — we handle that below
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: email.trim(),
-      password,
-      email_confirm: true, // Auto-confirm so user can login immediately
-      user_metadata: {
-        full_name: fullName.trim(),
-        referral_code: referralCode || undefined,
-      },
-    });
+    let userId: string;
 
-    if (authError) {
-      if (authError.message?.includes("already been registered") || authError.message?.includes("already exists")) {
+    if (isGoogleAuth) {
+      // ── Google auth: user already exists, find by email ─────────
+      // Use listUsers with perPage to search — Supabase admin API doesn't have getUserByEmail
+      const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      const existingUser = listData?.users?.find(
+        (u: { email?: string }) => u.email === email.trim()
+      );
+
+      if (listError || !existingUser) {
+        console.error("[checkout] Google user lookup error:", listError);
         return NextResponse.json(
-          { error: "Email ini sudah terdaftar. Silakan login atau gunakan email lain." },
-          { status: 409 }
+          { error: "Akun Google tidak ditemukan. Coba daftar ulang." },
+          { status: 400 }
         );
       }
-      console.error("[checkout] Auth error:", authError);
-      return NextResponse.json(
-        { error: "Gagal membuat akun. Coba lagi." },
-        { status: 500 }
-      );
-    }
+      userId = existingUser.id;
 
-    const userId = authData.user.id;
+      // Update user metadata
+      await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          full_name: fullName.trim(),
+          referral_code: referralCode || undefined,
+        },
+      });
+    } else {
+      // ── Email auth: create new user ─────────────────────────────
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email.trim(),
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName.trim(),
+          referral_code: referralCode || undefined,
+        },
+      });
+
+      if (authError) {
+        if (authError.message?.includes("already been registered") || authError.message?.includes("already exists")) {
+          return NextResponse.json(
+            { error: "Email ini sudah terdaftar. Silakan login atau gunakan email lain." },
+            { status: 409 }
+          );
+        }
+        console.error("[checkout] Auth error:", authError);
+        return NextResponse.json(
+          { error: "Gagal membuat akun. Coba lagi." },
+          { status: 500 }
+        );
+      }
+      userId = authData.user.id;
+    }
     const slug = slugify(storeName?.trim() || fullName.trim());
 
     // ── Create client row ─────────────────────────────────────────
