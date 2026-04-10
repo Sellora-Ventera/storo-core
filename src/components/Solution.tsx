@@ -119,7 +119,7 @@ const Solution = () => {
               tanpa kamu perlu bayar iklan. Retensi naik, omset naik, margin terjaga.
             </p>
             <Button asChild className="btn-hero gap-2 cursor-pointer">
-              <Link href="/sign-up">
+              <Link href="/onboarding">
                 Saya Mau Toko Sendiri
                 <ArrowRight className="w-4 h-4" />
               </Link>
