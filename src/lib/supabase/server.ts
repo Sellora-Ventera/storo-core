@@ -26,6 +26,9 @@ export async function createSupabaseServerClient() {
   );
 }
 
+// Alias for files that import createClient()
+export const createClient = createSupabaseServerClient;
+
 export async function createSupabaseServiceClient() {
   const cookieStore = await cookies();
 

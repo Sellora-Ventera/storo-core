@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -54,7 +56,6 @@ interface Client {
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const supabase = createClient();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [client, setClient] = useState<Client | null>(null);
@@ -63,6 +64,7 @@ export default function InvoiceDetailPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const load = async () => {
+    const supabase = createClient();
     const { data: inv } = await supabase
       .from("invoices").select("*").eq("id", id).single();
     if (!inv) { router.push("/dashboard/billing"); return; }
@@ -89,6 +91,7 @@ export default function InvoiceDetailPage() {
       if (url) { window.open(url, "_blank"); return; }
     }
     setPaying(true);
+    const supabase = createClient();
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("xendit-create-invoice", {

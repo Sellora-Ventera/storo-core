@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import BlogPostPage from "@/pages/BlogPost";
+import BlogPostPage from "@/page-components/BlogPost";
 
 // Static blog post titles for SEO metadata
 const blogTitles: Record<string, string> = {

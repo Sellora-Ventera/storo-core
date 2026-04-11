@@ -21,8 +21,11 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import storoLogo from "@/assets/storo-logo.png";
+import type { LucideIcon } from "lucide-react";
 
-const primaryNav = [
+type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean };
+
+const primaryNav: NavItem[] = [
   { href: "/dashboard", label: "Beranda", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/stores", label: "Toko Saya", icon: Store },
   { href: "/dashboard/products", label: "Produk", icon: Package },
@@ -30,7 +33,7 @@ const primaryNav = [
   { href: "/dashboard/billing", label: "Tagihan", icon: Receipt },
 ];
 
-const secondaryNav = [
+const secondaryNav: NavItem[] = [
   { href: "/dashboard/referral", label: "Referral", icon: Gift },
   { href: "/dashboard/profile", label: "Profil", icon: User },
   { href: "/dashboard/help", label: "Bantuan", icon: HelpCircle },

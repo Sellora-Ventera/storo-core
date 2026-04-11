@@ -23,7 +23,6 @@ type OnboardingRequest = {
 };
 
 export default function UploadPage() {
-  const supabase = createClient();
   const [stores, setStores] = useState<OnboardingRequest[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
@@ -31,6 +30,7 @@ export default function UploadPage() {
   const [clientId, setClientId] = useState<string | null>(null);
 
   useEffect(() => {
+    const supabase = createClient();
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -52,6 +52,7 @@ export default function UploadPage() {
   const handleUpload = async () => {
     if (!clientId || !selectedStore || files.length === 0) return;
     setUploading(true);
+    const supabase = createClient();
 
     const uploaded = [];
     for (const file of files) {

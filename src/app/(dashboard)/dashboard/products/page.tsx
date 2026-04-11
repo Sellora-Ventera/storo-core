@@ -310,7 +310,7 @@ export default function ProductsPage() {
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-base font-semibold text-gray-900 mb-1">Belum ada produk</h3>
               <p className="text-gray-500 text-sm">
-                Klik "Tambah Produk" untuk menambahkan produk pertama Anda.
+                Klik &quot;Tambah Produk&quot; untuk menambahkan produk pertama Anda.
               </p>
             </div>
           ) : (

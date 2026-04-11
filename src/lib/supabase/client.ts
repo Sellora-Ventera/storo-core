@@ -18,3 +18,6 @@ export function getSupabaseBrowserClient() {
   }
   return browserClient;
 }
+
+// Alias for files that import createClient()
+export const createClient = createSupabaseBrowserClient;
