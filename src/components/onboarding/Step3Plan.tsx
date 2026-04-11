@@ -87,7 +87,7 @@ export default function Step3Plan({ state, goNext, goBack, updateState }: Step3P
             <button
               key={plan.id}
               type="button"
-              onClick={() => updateState({ plan: plan.id })}
+              onClick={() => updateState({ plan: plan.id as WizardState["plan"] })}
               className={`relative flex flex-col text-left rounded-xl border-2 p-5 transition-all focus:outline-none
                 ${
                   isSelected

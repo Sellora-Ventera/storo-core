@@ -28,12 +28,11 @@ import { PLANS, getPlan, formatIDR, type PlanId } from "@/lib/plans";
 
 // ── Types ────────────────────────────────────────────────────────────────
 type Step = 1 | 2 | 3 | 4 | 5 | 6; // 6 = success
-type WizardPlanId = "starter" | "business" | "enterprise";
 
 type State = {
   step: Step;
   // Step 1: Plan
-  plan: PlanId | WizardPlanId | "";
+  plan: PlanId | "";
   // Step 2: Domain
   websiteName: string; // slug for <slug>.storo.id
   subdomain: string;
@@ -145,7 +144,7 @@ export default function OnboardingWizard() {
   useEffect(() => {
     const planParam = searchParams.get("plan");
     if (planParam && getPlan(planParam)) {
-      dispatch({ type: "UPDATE", payload: { plan: planParam as WizardPlanId } });
+      dispatch({ type: "UPDATE", payload: { plan: planParam as PlanId } });
     }
   }, [searchParams]);
 
