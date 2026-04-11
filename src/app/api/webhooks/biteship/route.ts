@@ -278,6 +278,15 @@ async function handleWaybillEvent(
 // ─── Route ──────────────────────────────────────────────────────────────────
 
 /**
+ * GET /api/webhooks/biteship
+ * Health-check / installation probe. Biteship may GET this URL during webhook
+ * installation to verify reachability. Always returns 200 OK.
+ */
+export async function GET() {
+  return NextResponse.json({ status: 'ok' })
+}
+
+/**
  * POST /api/webhooks/biteship
  * Receives webhook events from Biteship: order.status, order.price, order.waybill_id.
  *
@@ -288,17 +297,32 @@ async function handleWaybillEvent(
  * Configure this URL in the Biteship dashboard:
  *   https://storo.id/api/webhooks/biteship
  *
- * If BITESHIP_WEBHOOK_SECRET is set, the request must include a matching
- * x-biteship-signature (or x-callback-token / signature) header.
+ * During installation Biteship sends a validation ping with an empty body and
+ * no signature header — we accept it with 200 OK so installation can succeed.
+ * Once installed, real events MUST include a matching signature header.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Read raw body first so we can detect Biteship's installation validation ping
+    // (empty body, no signature). Real events have a JSON body.
+    const rawBody = await request.text()
+    if (!rawBody || rawBody.trim() === '' || rawBody.trim() === '{}') {
+      console.log('[webhook/biteship] installation validation ping — replying ok')
+      return NextResponse.json({ status: 'ok' })
+    }
+
     if (!verifySignature(request)) {
       console.error('[webhook/biteship] Invalid or missing signature')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = (await request.json()) as BiteshipWebhookBody
+    let body: BiteshipWebhookBody
+    try {
+      body = JSON.parse(rawBody) as BiteshipWebhookBody
+    } catch (parseError) {
+      console.error('[webhook/biteship] Invalid JSON body:', parseError)
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
     console.log('[webhook/biteship] received', JSON.stringify(body))
 
     const waybillId = (body as { courier_waybill_id?: string }).courier_waybill_id
