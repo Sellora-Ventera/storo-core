@@ -4,15 +4,41 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Mapping Biteship order status → our order status.
- * Only statuses that should trigger an update are mapped.
+ * Covers all 13 Biteship statuses. Biteship sends snake_case in webhook body
+ * (dashboard displays camelCase: pickingUp, droppingOff, returnInTransit, etc.).
+ *
+ * Terminal states (return_in_transit, rejected, courier_not_found, returned,
+ * cancelled, disposed) bypass monotonic progression and can be applied from
+ * any current state — Biteship is the source of truth for cancellation.
  */
-const STATUS_MAP: Record<string, { orderStatus: string; setTimestamp?: 'shipped_at' | 'delivered_at' }> = {
-  confirmed:    { orderStatus: 'processing' },
-  allocated:    { orderStatus: 'processing' },
-  picking_up:   { orderStatus: 'processing' },
-  picked:       { orderStatus: 'shipped', setTimestamp: 'shipped_at' },
-  dropping_off: { orderStatus: 'shipped', setTimestamp: 'shipped_at' },
-  delivered:    { orderStatus: 'delivered', setTimestamp: 'delivered_at' },
+const STATUS_MAP: Record<
+  string,
+  {
+    orderStatus: string
+    setTimestamp?: 'shipped_at' | 'delivered_at'
+    terminal?: boolean
+  }
+> = {
+  // Forward progression — processing
+  confirmed:         { orderStatus: 'processing' },
+  allocated:         { orderStatus: 'processing' },
+  picking_up:        { orderStatus: 'processing' },
+  on_hold:           { orderStatus: 'processing' }, // temporary pause, not terminal
+
+  // Forward progression — shipped
+  picked:            { orderStatus: 'shipped', setTimestamp: 'shipped_at' },
+  dropping_off:      { orderStatus: 'shipped', setTimestamp: 'shipped_at' },
+
+  // Forward progression — delivered
+  delivered:         { orderStatus: 'delivered', setTimestamp: 'delivered_at' },
+
+  // Terminal / cancellation states — bypass monotonic progression
+  return_in_transit: { orderStatus: 'cancelled', terminal: true },
+  rejected:          { orderStatus: 'cancelled', terminal: true },
+  courier_not_found: { orderStatus: 'cancelled', terminal: true },
+  returned:          { orderStatus: 'cancelled', terminal: true },
+  cancelled:         { orderStatus: 'cancelled', terminal: true },
+  disposed:          { orderStatus: 'cancelled', terminal: true },
 }
 
 const STATUS_ORDER = ['pending', 'awaiting_payment', 'paid', 'processing', 'shipped', 'delivered']
@@ -37,10 +63,14 @@ interface BiteshipStatusEvent {
 
 interface BiteshipPriceEvent {
   event: 'order.price'
-  order_id: string
+  order_id?: string
   status?: string
+  // Biteship uses inconsistent field names across docs and production payloads.
+  // Accept both variants; prefer the order_* version when both present.
   price?: number
-  shippment_fee?: number
+  order_price?: number
+  shippment_fee?: number       // note: typo is Biteship's, not ours
+  order_shipment_fee?: number
   cash_on_delivery_fee?: number
   proof_of_delivery_fee?: number
   courier_waybill_id?: string
@@ -92,26 +122,71 @@ function verifySignature(request: NextRequest): boolean {
   return candidates.some((h) => h && h === secret)
 }
 
-async function findOrderByWaybill(
+/**
+ * Locate an order from a Biteship webhook payload.
+ *
+ * Strategy (2-tier, NEVER uses `order_id` — Biteship does NOT send `order_id`
+ * in webhook body in production, even though test payloads in the Biteship
+ * dashboard include it):
+ *
+ *   1. **Primary**: `shipping_tracking_number = courier_waybill_id` — handles
+ *      the normal case where the waybill in the payload matches what's in DB.
+ *
+ *   2. **Fallback**: `metadata->biteship->>tracking_id = courier_tracking_id` —
+ *      handles `order.waybill_id` events where Biteship re-allocates the
+ *      courier and the waybill in the payload is DIFFERENT from the one
+ *      stored in DB. `tracking_id` is Biteship's stable per-order identifier
+ *      that does NOT change on re-allocation. Stored by storoengine at
+ *      shipping order creation time (see storoengine shipping/orders route).
+ */
+async function findOrderByWaybillOrTracking(
   supabase: SupabaseClient,
-  waybillId: string,
+  waybillId: string | undefined,
+  trackingId: string | undefined,
 ): Promise<OrderRow | null> {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('id, status, metadata, shipped_at, delivered_at')
-    .eq('shipping_tracking_number', waybillId)
-    .limit(1)
+  // Primary: by waybill
+  if (waybillId) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, status, metadata, shipped_at, delivered_at')
+      .eq('shipping_tracking_number', waybillId)
+      .limit(1)
 
-  if (error) {
-    console.error('[webhook/biteship] DB query error:', error)
-    return null
+    if (error) {
+      console.error('[webhook/biteship] DB query error (waybill):', error)
+    } else if (data && data.length > 0) {
+      return data[0] as OrderRow
+    }
   }
-  return data && data.length > 0 ? (data[0] as OrderRow) : null
+
+  // Fallback: by Biteship tracking_id stored in metadata
+  if (trackingId) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, status, metadata, shipped_at, delivered_at')
+      .eq('metadata->biteship->>tracking_id', trackingId)
+      .limit(1)
+
+    if (error) {
+      console.error('[webhook/biteship] DB query error (tracking_id):', error)
+      return null
+    }
+    if (data && data.length > 0) {
+      console.log(`[webhook/biteship] Matched order via tracking_id fallback (waybill ${waybillId ?? 'null'} did not match)`)
+      return data[0] as OrderRow
+    }
+  }
+
+  return null
 }
 
 /**
  * Returns updateData fragments for status advancement, or empty object if status
- * should not change. Enforces monotonic progression (never moves backward).
+ * should not change.
+ *
+ * - Terminal states (cancelled etc) apply from ANY current state — Biteship is
+ *   the source of truth for cancellation. Only no-op if already in that terminal.
+ * - Non-terminal states enforce monotonic progression (never move backward).
  */
 function buildStatusAdvance(
   currentStatus: string,
@@ -125,6 +200,13 @@ function buildStatusAdvance(
     console.log(`[webhook/biteship] Unmapped status "${newBiteshipStatus}" — not auto-updating order status`)
     return {}
   }
+
+  // Terminal states bypass monotonic check
+  if (mapping.terminal) {
+    if (currentStatus === mapping.orderStatus) return {}
+    return { status: mapping.orderStatus }
+  }
+
   const currentIdx = STATUS_ORDER.indexOf(currentStatus)
   const newIdx = STATUS_ORDER.indexOf(mapping.orderStatus)
   if (newIdx <= currentIdx) return {}
@@ -209,9 +291,13 @@ async function handlePriceEvent(
   order: OrderRow,
   body: BiteshipPriceEvent,
 ): Promise<void> {
+  // Biteship uses inconsistent field names — accept both variants
+  const priceTotal = body.order_price ?? body.price
+  const shipmentFee = body.order_shipment_fee ?? body.shippment_fee
+
   const biteshipPatch: Record<string, unknown> = {}
-  if (body.price !== undefined) biteshipPatch.price_total = body.price
-  if (body.shippment_fee !== undefined) biteshipPatch.shipment_fee = body.shippment_fee
+  if (priceTotal !== undefined) biteshipPatch.price_total = priceTotal
+  if (shipmentFee !== undefined) biteshipPatch.shipment_fee = shipmentFee
   if (body.cash_on_delivery_fee !== undefined) biteshipPatch.cash_on_delivery_fee = body.cash_on_delivery_fee
   if (body.proof_of_delivery_fee !== undefined) biteshipPatch.proof_of_delivery_fee = body.proof_of_delivery_fee
   if (body.status) biteshipPatch.status = body.status
@@ -220,8 +306,8 @@ async function handlePriceEvent(
     metadata: mergeBiteshipMeta(order.metadata, biteshipPatch),
   }
 
-  // Use shippment_fee as canonical shipping_cost; fallback to price (total).
-  const newShippingCost = body.shippment_fee ?? body.price
+  // Canonical shipping cost: prefer shipment_fee (courier fee), fallback to total price
+  const newShippingCost = shipmentFee ?? priceTotal
   if (newShippingCost !== undefined) {
     updateData.shipping_cost = newShippingCost
   }
@@ -237,7 +323,7 @@ async function handlePriceEvent(
     throw error
   }
   console.log(
-    `[webhook/biteship] order ${order.id} price updated: shipping_cost=${newShippingCost}, total=${body.price}`,
+    `[webhook/biteship] order ${order.id} price updated: shipping_cost=${newShippingCost}, total=${priceTotal}`,
   )
 }
 
@@ -326,16 +412,20 @@ export async function POST(request: NextRequest) {
     console.log('[webhook/biteship] received', JSON.stringify(body))
 
     const waybillId = (body as { courier_waybill_id?: string }).courier_waybill_id
-    if (!waybillId) {
-      console.warn('[webhook/biteship] Missing courier_waybill_id in payload — order not yet allocated, ignoring')
+    const trackingId = (body as { courier_tracking_id?: string }).courier_tracking_id
+
+    if (!waybillId && !trackingId) {
+      console.warn('[webhook/biteship] Payload has no courier_waybill_id or courier_tracking_id — ignoring')
       return NextResponse.json({ status: 'ignored' })
     }
 
     const supabase = (await createSupabaseServiceClient()) as unknown as SupabaseClient
-    const order = await findOrderByWaybill(supabase, waybillId)
+    const order = await findOrderByWaybillOrTracking(supabase, waybillId, trackingId)
 
     if (!order) {
-      console.warn(`[webhook/biteship] No order found for waybill: ${waybillId}`)
+      console.warn(
+        `[webhook/biteship] Order not found (waybill=${waybillId ?? 'null'}, tracking_id=${trackingId ?? 'null'})`,
+      )
       // Return 200 to prevent Biteship from retrying
       return NextResponse.json({ status: 'not_found' })
     }
