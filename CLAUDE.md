@@ -73,7 +73,7 @@ src/
 - Notifikasi client: Hanya SATU trigger — saat `onboarding_requests.status = 'live'`
 - Source of truth storoengine: `PTVENTERA-AI/storoengine` (private org)
 - Update template: Versioning git tag (v1.0.0+), file `.storo-version` per client
-- **Webhook Biteship pusat:** `src/app/api/webhooks/biteship/route.ts` menerima semua event tracking shipment (order.status, order.price, order.waybill_id) dari akun Biteship VenteraAI. Multi-tenant via lookup `orders.metadata->biteship->>order_id` (cross-store). Env: `BITESHIP_WEBHOOK_SECRET`. URL di dashboard Biteship: `https://storo.id/api/webhooks/biteship`.
+- **Webhook Biteship pusat:** `src/app/api/webhooks/biteship/route.ts` menerima semua event tracking shipment (order.status, order.price, order.waybill_id) dari akun Biteship VenteraAI. Multi-tenant via lookup kolom `orders.shipping_tracking_number` (waybill/nomor resi, cross-store). Index: `idx_orders_shipping_tracking_number` (migration `009_index_shipping_tracking.sql` di storoengine). Env: `BITESHIP_WEBHOOK_SECRET`. URL di dashboard Biteship: `https://storo.id/api/webhooks/biteship`.
 - **Order-first registration flow:** User memesan toko TANPA akun dulu. Akun Supabase Auth dibuat di akhir wizard (step 4), sebelum redirect ke Xendit. Ini menggantikan flow lama (sign-up dulu → onboarding). Sign-up page lama (`/sign-up`) tetap ada tapi bukan flow utama.
 - **Plan data terpusat:** `src/lib/plans.ts` adalah single source of truth untuk 5 plan (Starter, Pro, Advance, Flexible, Custom). Diimpor oleh: OnboardingWizard, pricing page, checkout API route.
 - **Checkout API route:** `POST /api/onboarding/checkout` memanggil Xendit API langsung (bukan via edge function `xendit-create-invoice` yang butuh auth token). Env: `XENDIT_SECRET_KEY`.

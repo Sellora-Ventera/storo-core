@@ -92,14 +92,14 @@ function verifySignature(request: NextRequest): boolean {
   return candidates.some((h) => h && h === secret)
 }
 
-async function findOrderByBiteshipId(
+async function findOrderByWaybill(
   supabase: SupabaseClient,
-  biteshipOrderId: string,
+  waybillId: string,
 ): Promise<OrderRow | null> {
   const { data, error } = await supabase
     .from('orders')
     .select('id, status, metadata, shipped_at, delivered_at')
-    .filter('metadata->biteship->>order_id', 'eq', biteshipOrderId)
+    .eq('shipping_tracking_number', waybillId)
     .limit(1)
 
   if (error) {
@@ -283,7 +283,7 @@ async function handleWaybillEvent(
  *
  * This is the CENTRAL platform webhook — Biteship sends all tracking events here
  * regardless of which client store the shipment belongs to. Orders are located
- * across all stores by matching metadata->biteship->>order_id.
+ * across all stores by matching shipping_tracking_number (waybill / nomor resi).
  *
  * Configure this URL in the Biteship dashboard:
  *   https://storo.id/api/webhooks/biteship
@@ -301,17 +301,17 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as BiteshipWebhookBody
     console.log('[webhook/biteship] received', JSON.stringify(body))
 
-    const biteshipOrderId = body.order_id as string | undefined
-    if (!biteshipOrderId) {
-      console.warn('[webhook/biteship] Missing order_id in payload')
+    const waybillId = (body as { courier_waybill_id?: string }).courier_waybill_id
+    if (!waybillId) {
+      console.warn('[webhook/biteship] Missing courier_waybill_id in payload — order not yet allocated, ignoring')
       return NextResponse.json({ status: 'ignored' })
     }
 
     const supabase = (await createSupabaseServiceClient()) as unknown as SupabaseClient
-    const order = await findOrderByBiteshipId(supabase, biteshipOrderId)
+    const order = await findOrderByWaybill(supabase, waybillId)
 
     if (!order) {
-      console.warn(`[webhook/biteship] No order found for Biteship order_id: ${biteshipOrderId}`)
+      console.warn(`[webhook/biteship] No order found for waybill: ${waybillId}`)
       // Return 200 to prevent Biteship from retrying
       return NextResponse.json({ status: 'not_found' })
     }
