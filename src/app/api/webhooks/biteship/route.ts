@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sendEmail } from '@/lib/email/send'
+import { orderShippedEmail, orderDeliveredEmail } from '@/lib/email/templates'
 
 /**
  * Mapping Biteship order status → our order status.
@@ -97,6 +99,9 @@ interface OrderRow {
   metadata: Record<string, unknown> | null
   shipped_at: string | null
   delivered_at: string | null
+  order_number: string
+  customer_name: string | null
+  customer_email: string | null
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -148,7 +153,7 @@ async function findOrderByWaybillOrTracking(
   if (waybillId) {
     const { data, error } = await supabase
       .from('orders')
-      .select('id, status, metadata, shipped_at, delivered_at')
+      .select('id, status, metadata, shipped_at, delivered_at, order_number, customer_name, customer_email')
       .eq('shipping_tracking_number', waybillId)
       .limit(1)
 
@@ -163,7 +168,7 @@ async function findOrderByWaybillOrTracking(
   if (trackingId) {
     const { data, error } = await supabase
       .from('orders')
-      .select('id, status, metadata, shipped_at, delivered_at')
+      .select('id, status, metadata, shipped_at, delivered_at, order_number, customer_name, customer_email')
       .eq('metadata->biteship->>tracking_id', trackingId)
       .limit(1)
 
@@ -284,6 +289,31 @@ async function handleStatusEvent(
   console.log(
     `[webhook/biteship] order ${order.id} status updated: biteship=${body.status}, order_status=${updateData.status ?? order.status}`,
   )
+
+  // ── Email customer on shipped/delivered transitions ────────────────────────
+  // Only send if status actually transitioned (buildStatusAdvance sets updateData.status)
+  const newStatus = updateData.status as string | undefined
+  if (newStatus && newStatus !== order.status && order.customer_email) {
+    if (newStatus === 'shipped') {
+      const waybill = (updateData.shipping_tracking_number as string | undefined) ?? body.courier_waybill_id
+      if (waybill) {
+        const tpl = orderShippedEmail({
+          orderNumber: order.order_number,
+          customerName: order.customer_name,
+          waybillId: waybill,
+          courier: body.courier_company ?? undefined,
+          trackingUrl: body.courier_link ?? undefined,
+        })
+        await sendEmail({ to: order.customer_email, subject: tpl.subject, html: tpl.html })
+      }
+    } else if (newStatus === 'delivered') {
+      const tpl = orderDeliveredEmail({
+        orderNumber: order.order_number,
+        customerName: order.customer_name,
+      })
+      await sendEmail({ to: order.customer_email, subject: tpl.subject, html: tpl.html })
+    }
+  }
 }
 
 async function handlePriceEvent(
