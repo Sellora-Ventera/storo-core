@@ -53,7 +53,7 @@ src/
 ├── components/
 │   └── onboarding/       # OnboardingWizard.tsx (5-step wizard utama)
 ├── lib/
-│   ├── auth/             # Abstraction layer auth (swap supabase/clerk)
+│   ├── auth/             # Wrapper tipis di atas Supabase Auth
 │   ├── supabase/         # Setup Supabase client (server + browser)
 │   ├── plans.ts          # Single source of truth: plan data & pricing
 │   ├── dal.ts            # Data access layer
@@ -68,7 +68,7 @@ src/
 
 ## Keputusan Utama
 
-- Auth: Supabase Auth (bukan Clerk) — single source of truth, RLS bekerja native
+- Auth: Supabase Auth — single source of truth, RLS bekerja native. Dipakai di kedua repo (storo.id + storoengine admin).
 - Namecheap: Mock API dulu, key asli diberikan owner nanti
 - Notifikasi client: Hanya SATU trigger — saat `onboarding_requests.status = 'live'`
 - Source of truth storoengine: `PTVENTERA-AI/storoengine` (private org)
