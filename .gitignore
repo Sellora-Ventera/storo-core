@@ -32,3 +32,9 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+
+# supabase temp files
+supabase/.temp/
+
+# typescript build info
+*.tsbuildinfo

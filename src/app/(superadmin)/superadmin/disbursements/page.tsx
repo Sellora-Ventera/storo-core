@@ -28,16 +28,6 @@ export default async function DisbursementsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/sign-in");
-
-  const { data: adminUser } = await supabase
-    .from("superadmin_users")
-    .select("id, role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!adminUser) redirect("/sign-in");
-
   const { data: disbursements } = await supabase
     .from("disbursements")
     .select("id, store_id, period_label, gross_amount, pg_fee, ops_fee, net_amount, status, paid_at, created_at, onboarding_requests(store_url)")

@@ -12,6 +12,7 @@ import FloatingChatbot from "@/components/FloatingChatbot";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import LeadCapturePopup from "@/components/LeadCapturePopup";
 import ExitIntentPopup from "@/components/ExitIntentPopup";
+import TemplateShowcase from "@/components/TemplateShowcase";
 import ScrollAnimator from "@/components/ScrollAnimator";
 
 export const metadata: Metadata = {
@@ -111,6 +112,7 @@ export default function HomePage() {
         <Hero />
         <Problem />
         <Solution />
+        <TemplateShowcase />
         <HowItWorks />
         <Pricing />
         <FAQ />

@@ -1,312 +1,322 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { Plus, Eye, ExternalLink, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Loader2, RefreshCw } from "lucide-react";
+import TemplateCard, {
+  type TemplateCardData,
+} from "@/components/superadmin/TemplateCard";
+import TemplateDeployModal from "@/components/superadmin/TemplateDeployModal";
+import TemplateEditModal from "@/components/superadmin/TemplateEditModal";
 
-interface Template {
-  id: string;
-  name: string;
-  description: string | null;
-  preview_url: string | null;
-  demo_url: string | null;
-  is_active: boolean;
-  created_at: string;
-}
+// Poll Vercel status endpoint for any deploying template every N ms.
+// Separate from Supabase Realtime (which only reflects DB changes).
+const VERCEL_POLL_INTERVAL = 4000;
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<TemplateCardData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    preview_url: "",
-    demo_url: "",
-    is_active: true,
-  });
-  const [formMessage, setFormMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [trackingTemplateId, setTrackingTemplateId] = useState<string | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateCardData | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const pollingActiveRef = useRef(false);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("templates")
-      .select("id, name, description, preview_url, demo_url, is_active, created_at")
+      .select(
+        "id, slug, name, display_name, description, category, preview_image_url, demo_url, is_active, deploy_status, deploy_error, price_setup_override, price_monthly_override",
+      )
       .order("created_at", { ascending: false });
-    setTemplates(data ?? []);
+
+    if (error) {
+      setFeedback({ type: "error", text: error.message });
+    } else {
+      setTemplates((data ?? []) as TemplateCardData[]);
+    }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     fetchTemplates();
-  }, []);
+  }, [fetchTemplates]);
 
-  const handleToggle = async (template: Template) => {
+  // Supabase Realtime: subscribe to all DB changes on `templates`
+  useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    await supabase
-      .from("templates")
-      .update({ is_active: !template.is_active })
-      .eq("id", template.id);
-    fetchTemplates();
+    const channel = supabase
+      .channel("templates-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "templates" },
+        () => {
+          fetchTemplates();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchTemplates]);
+
+  // Poll Vercel-side status for any deploying template (forces DB update).
+  // Realtime only reflects DB changes; we still need to nudge Vercel to sync.
+  useEffect(() => {
+    const deployingIds = templates
+      .filter(
+        (t) => t.deploy_status === "deploying" || t.deploy_status === "taking_down",
+      )
+      .map((t) => t.id);
+
+    if (deployingIds.length === 0 || pollingActiveRef.current) return;
+
+    pollingActiveRef.current = true;
+    const interval = setInterval(async () => {
+      await Promise.all(
+        deployingIds.map((id) =>
+          fetch(`/api/superadmin/templates/${id}/status`).catch(() => null),
+        ),
+      );
+      // Realtime subscription will pick up the DB changes.
+    }, VERCEL_POLL_INTERVAL);
+
+    return () => {
+      clearInterval(interval);
+      pollingActiveRef.current = false;
+    };
+  }, [templates]);
+
+  const handleToggleActive = async (template: TemplateCardData) => {
+    setBusyId(template.id);
+    try {
+      const res = await fetch(`/api/superadmin/templates/${template.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !template.is_active }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Gagal update" }));
+        throw new Error(err.error);
+      }
+      await fetchTemplates();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal update";
+      setFeedback({ type: "error", text: msg });
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setFormMessage(null);
-
-    const supabase = getSupabaseBrowserClient();
-    const { error } = await supabase.from("templates").insert({
-      name: form.name,
-      description: form.description || null,
-      preview_url: form.preview_url || null,
-      demo_url: form.demo_url || null,
-      is_active: form.is_active,
-    });
-
-    if (error) {
-      setFormMessage({ type: "error", text: error.message });
-    } else {
-      setFormMessage({ type: "success", text: "Template berhasil ditambahkan." });
-      setForm({ name: "", description: "", preview_url: "", demo_url: "", is_active: true });
-      fetchTemplates();
-      setTimeout(() => {
-        setShowForm(false);
-        setFormMessage(null);
-      }, 1500);
+  const handleRedeploy = async (template: TemplateCardData) => {
+    // First-time deploy OR retry after failure → call /deploy (full idempotent flow)
+    if (template.deploy_status === "draft" || template.deploy_status === "failed") {
+      setBusyId(template.id);
+      try {
+        const res = await fetch(`/api/superadmin/templates/${template.id}/deploy`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Gagal deploy" }));
+          throw new Error(err.error);
+        }
+        // Open modal to track progress
+        setTrackingTemplateId(template.id);
+        await fetchTemplates();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Gagal deploy";
+        setFeedback({ type: "error", text: msg });
+      } finally {
+        setBusyId(null);
+      }
+      return;
     }
-    setSubmitting(false);
+
+    const branch = window.prompt(
+      "Branch atau tag yang mau di-deploy?",
+      "main",
+    );
+    if (!branch) return;
+
+    setBusyId(template.id);
+    try {
+      const res = await fetch(`/api/superadmin/templates/${template.id}/redeploy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Gagal redeploy" }));
+        throw new Error(err.error);
+      }
+      // Open modal to track redeploy progress
+      setTrackingTemplateId(template.id);
+      await fetchTemplates();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal redeploy";
+      setFeedback({ type: "error", text: msg });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleTakedown = async (template: TemplateCardData) => {
+    if (
+      !window.confirm(
+        `Hapus template "${template.display_name}"? Vercel project + DNS record + data dummy akan dihapus permanen.`,
+      )
+    )
+      return;
+    if (
+      !window.confirm(
+        "Konfirmasi sekali lagi: tindakan ini TIDAK bisa di-undo. Lanjutkan?",
+      )
+    )
+      return;
+
+    setBusyId(template.id);
+    try {
+      const res = await fetch(`/api/superadmin/templates/${template.id}/takedown`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Gagal takedown" }));
+        throw new Error(err.error);
+      }
+      setFeedback({ type: "success", text: "Template dihapus." });
+      await fetchTemplates();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal takedown";
+      setFeedback({ type: "error", text: msg });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleEdit = (template: TemplateCardData) => {
+    setEditingTemplate(template);
+  };
+
+  const handleViewLogs = (template: TemplateCardData) => {
+    setTrackingTemplateId(template.id);
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Template Gallery</h1>
-          <p className="text-gray-500 mt-1 text-sm">Kelola template toko yang tersedia</p>
+          <p className="text-gray-500 mt-1 text-sm">
+            Kelola template storoengine yang tersedia. Tambah baru = otomatis deploy ke
+            Vercel + DNS Cloudflare.
+          </p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          Tambah Template
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchTemplates}
+            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            title="Refresh"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 bg-[#4169df] hover:bg-[#3458c8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Template
+          </button>
+        </div>
       </div>
 
-      {/* Add Form */}
-      {showForm && (
-        <div className="bg-white border border-blue-100 rounded-xl p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Tambah Template Baru</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  required
-                  placeholder="cth. Minimalist Fashion"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Deskripsi
-                </label>
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Deskripsi singkat template"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Preview URL
-                </label>
-                <input
-                  type="url"
-                  value={form.preview_url}
-                  onChange={(e) => setForm((p) => ({ ...p, preview_url: e.target.value }))}
-                  placeholder="https://..."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Demo URL
-                </label>
-                <input
-                  type="url"
-                  value={form.demo_url}
-                  onChange={(e) => setForm((p) => ({ ...p, demo_url: e.target.value }))}
-                  placeholder="https://..."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={form.is_active}
-                onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-                className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
-              <label htmlFor="is_active" className="text-sm text-gray-700">
-                Aktif (tampil di pilihan template)
-              </label>
-            </div>
-
-            {formMessage && (
-              <div
-                className={`text-sm px-3 py-2 rounded-lg ${
-                  formMessage.type === "success"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
-                }`}
-              >
-                {formMessage.text}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-60 cursor-pointer"
-              >
-                {submitting ? "Menyimpan..." : "Tambah Template"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Batal
-              </button>
-            </div>
-          </form>
+      {feedback && (
+        <div
+          className={`text-sm px-3 py-2 rounded-lg border ${
+            feedback.type === "success"
+              ? "bg-green-50 border-green-100 text-green-700"
+              : "bg-red-50 border-red-100 text-red-700"
+          }`}
+        >
+          {feedback.text}
+          <button
+            onClick={() => setFeedback(null)}
+            className="ml-2 underline cursor-pointer"
+          >
+            tutup
+          </button>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="py-10 text-center text-gray-400 text-sm">Memuat data...</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase w-10">
-                    No
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">
-                    Nama
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">
-                    Deskripsi
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">
-                    Preview
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">
-                    Demo
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">
-                    Status
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {templates.length > 0 ? (
-                  templates.map((t, idx) => (
-                    <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-400 text-xs">{idx + 1}</td>
-                      <td className="py-3 px-4 font-medium text-gray-900">{t.name}</td>
-                      <td className="py-3 px-4 text-gray-600 max-w-[180px] truncate">
-                        {t.description ?? "-"}
-                      </td>
-                      <td className="py-3 px-4">
-                        {t.preview_url ? (
-                          <a
-                            href={t.preview_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-600 text-xs"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            Preview
-                          </a>
-                        ) : (
-                          <span className="text-gray-300 text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        {t.demo_url ? (
-                          <a
-                            href={t.demo_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-600 text-xs"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Demo
-                          </a>
-                        ) : (
-                          <span className="text-gray-300 text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex text-xs font-medium px-2 py-1 rounded-full border ${
-                            t.is_active
-                              ? "bg-green-100 text-green-700 border-green-200"
-                              : "bg-gray-100 text-gray-500 border-gray-200"
-                          }`}
-                        >
-                          {t.is_active ? "Aktif" : "Nonaktif"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => handleToggle(t)}
-                          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
-                          title={t.is_active ? "Nonaktifkan" : "Aktifkan"}
-                        >
-                          {t.is_active ? (
-                            <ToggleRight className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <ToggleLeft className="w-4 h-4 text-gray-400" />
-                          )}
-                          {t.is_active ? "Nonaktifkan" : "Aktifkan"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-10 text-center text-gray-400 text-sm">
-                      Belum ada template
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
+      {/* Grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-gray-400">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          <span className="text-sm">Memuat template...</span>
         </div>
-      </div>
+      ) : templates.length === 0 ? (
+        <div className="text-center py-16 bg-white border border-dashed border-gray-200 rounded-xl">
+          <p className="text-sm text-gray-500 mb-4">Belum ada template.</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 bg-[#4169df] hover:bg-[#3458c8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Template Pertama
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {templates.map((t) => (
+            <div key={t.id} className={busyId === t.id ? "opacity-60 pointer-events-none" : ""}>
+              <TemplateCard
+                template={t}
+                onEdit={handleEdit}
+                onRedeploy={handleRedeploy}
+                onTakedown={handleTakedown}
+                onToggleActive={handleToggleActive}
+                onViewLogs={handleViewLogs}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add modal */}
+      <TemplateDeployModal
+        open={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          fetchTemplates();
+        }}
+        onSuccess={fetchTemplates}
+      />
+
+      {/* Track redeploy/retry progress modal */}
+      <TemplateDeployModal
+        open={trackingTemplateId !== null}
+        trackTemplateId={trackingTemplateId}
+        onClose={() => {
+          setTrackingTemplateId(null);
+          fetchTemplates();
+        }}
+        onSuccess={fetchTemplates}
+      />
+
+      {/* Edit detail modal */}
+      <TemplateEditModal
+        open={editingTemplate !== null}
+        template={editingTemplate}
+        onClose={() => setEditingTemplate(null)}
+        onSaved={fetchTemplates}
+      />
     </div>
   );
 }

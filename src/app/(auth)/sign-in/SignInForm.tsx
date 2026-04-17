@@ -19,6 +19,23 @@ function GoogleIcon() {
   );
 }
 
+async function resolveLandingPath(requestedRedirect: string): Promise<string> {
+  try {
+    const res = await fetch("/api/auth/role", { cache: "no-store" });
+    if (!res.ok) return requestedRedirect;
+    const data = (await res.json()) as {
+      authenticated: boolean;
+      role: "superadmin" | "client" | null;
+    };
+    if (data.authenticated && data.role === "superadmin" && requestedRedirect === "/dashboard") {
+      return "/superadmin";
+    }
+  } catch {
+    /* fall through */
+  }
+  return requestedRedirect;
+}
+
 export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,7 +84,8 @@ export default function SignInForm() {
       setLoading(false);
       return;
     }
-    router.push(redirectTo);
+    const landing = await resolveLandingPath(redirectTo);
+    router.push(landing);
     router.refresh();
   };
 

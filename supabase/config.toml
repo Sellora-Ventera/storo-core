@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.chat-storo]
 verify_jwt = false
+
+[functions.strcr-create-invoice]
+verify_jwt = false
+
+[functions.strcr-payment-confirm]
+verify_jwt = false

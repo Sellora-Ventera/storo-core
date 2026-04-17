@@ -41,16 +41,6 @@ export default async function SuperadminOverviewPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/sign-in");
-
-  const { data: adminUser } = await supabase
-    .from("superadmin_users")
-    .select("id, role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!adminUser) redirect("/sign-in");
-
   // KPI: Total clients
   const { count: totalClients } = await supabase
     .from("clients")

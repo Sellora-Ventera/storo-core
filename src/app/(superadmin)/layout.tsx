@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import SuperadminSidebar from "@/components/dashboard/superadmin/SuperadminSidebar";
 
 export default async function SuperadminLayout({
@@ -12,20 +15,30 @@ export default async function SuperadminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  console.log("[superadmin-layout] user:", user?.email, user?.id);
+
   if (!user) {
+    console.log("[superadmin-layout] no user → redirect /sign-in");
     redirect("/sign-in");
   }
 
-  const { data: adminUser } = await supabase
+  // Use service role to bypass RLS for the auth gate check.
+  const serviceClient = await createSupabaseServiceClient();
+  const { data: adminUser, error: adminErr } = await serviceClient
     .from("superadmin_users")
-    .select("id, role")
+    .select("id, is_active")
     .eq("user_id", user.id)
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
+
+  console.log("[superadmin-layout] adminUser:", adminUser, "err:", adminErr);
 
   if (!adminUser) {
-    redirect("/sign-in");
+    console.log("[superadmin-layout] not superadmin → redirect /");
+    redirect("/");
   }
+
+  console.log("[superadmin-layout] SUCCESS, rendering panel");
 
   return (
     <div className="flex min-h-screen bg-gray-50">

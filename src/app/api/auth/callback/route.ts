@@ -11,13 +11,25 @@ export async function GET(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // If opened in a popup, close it and notify parent
       if (popup === "true") {
+        // Try postMessage + close; fallback redirect after 500ms
         return new NextResponse(
           `<!DOCTYPE html><html><body><script>
-            window.opener?.postMessage({ type: "AUTH_COMPLETE" }, window.location.origin);
-            window.close();
-          </script><p>Login berhasil. Menutup jendela...</p></body></html>`,
+            (function() {
+              var sent = false;
+              if (window.opener) {
+                try {
+                  window.opener.postMessage({ type: "AUTH_COMPLETE" }, window.location.origin);
+                  sent = true;
+                  window.close();
+                } catch(e) {}
+              }
+              // If close didn't work or no opener, redirect back
+              setTimeout(function() {
+                window.location.href = "/onboarding?step=5";
+              }, sent ? 500 : 0);
+            })();
+          </script><p>Login berhasil. Mengalihkan...</p></body></html>`,
           { headers: { "Content-Type": "text/html" } }
         );
       }
@@ -28,9 +40,16 @@ export async function GET(request: Request) {
   if (popup === "true") {
     return new NextResponse(
       `<!DOCTYPE html><html><body><script>
-        window.opener?.postMessage({ type: "AUTH_FAILED" }, window.location.origin);
-        window.close();
-      </script><p>Login gagal. Menutup jendela...</p></body></html>`,
+        if (window.opener) {
+          try {
+            window.opener.postMessage({ type: "AUTH_FAILED" }, window.location.origin);
+            window.close();
+          } catch(e) {}
+        }
+        setTimeout(function() {
+          window.location.href = "/onboarding?step=4";
+        }, 300);
+      </script><p>Login gagal. Mengalihkan...</p></body></html>`,
       { headers: { "Content-Type": "text/html" } }
     );
   }

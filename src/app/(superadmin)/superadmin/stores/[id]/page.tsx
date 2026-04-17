@@ -32,16 +32,6 @@ export default async function StoreDetailPage({
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/sign-in");
-
-  const { data: adminUser } = await supabase
-    .from("superadmin_users")
-    .select("id, role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!adminUser) redirect("/sign-in");
-
   const { id } = await params;
 
   const { data: store } = await supabase

@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       storeName,
       plan: planId,
       selectedDomain,
+      customDomain,
       email,
       password,
       authMethod,
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         full_name: fullName.trim(),
-        whatsapp: phone.trim(),
+        phone: phone.trim(),
         shopee_store_link: shopeeStoreLink?.trim() || null,
         shopee_store_name: storeName?.trim() || null,
       })
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
         plan: planId,
         template_name: "modern", // default template, changed by engineer later
         requested_slug: slug,
-        custom_domain: selectedDomain?.trim() || null,
+        custom_domain: customDomain?.trim() || null,
         status: "pending",
       });
 
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest) {
       phone: phone.trim(),
       shopee_store_link: shopeeStoreLink?.trim() || null,
       plan: planId,
-      selected_domain: selectedDomain?.trim() || null,
+      selected_domain: customDomain?.trim() || selectedDomain?.trim() || null,
       email: email.trim(),
       store_name: storeName?.trim() || null,
       client_id: client.id,
@@ -214,66 +215,57 @@ export async function POST(request: NextRequest) {
       status: "account_created",
     });
 
-    // ── Create Xendit invoice ─────────────────────────────────────
-    const XENDIT_SECRET_KEY = process.env.XENDIT_SECRET_KEY;
-    if (!XENDIT_SECRET_KEY) {
-      // Xendit not configured — return invoice ID so user can pay later
+    // ── Create Xendit invoice via edge function (Gateway pattern) ──
+    const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+    const edgeFnUrl = `${SUPABASE_URL}/functions/v1/strcr-create-invoice`;
+
+    try {
+      const edgeFnRes = await fetch(edgeFnUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invoice_id: invoice.id,
+          description,
+          customer: {
+            given_names: fullName.trim(),
+            email: email.trim(),
+          },
+          success_redirect_url: `${APP_URL}/payment/success?invoice_id=${invoice.id}`,
+          failure_redirect_url: `${APP_URL}/payment/failed?invoice_id=${invoice.id}`,
+        }),
+      });
+
+      if (!edgeFnRes.ok) {
+        const errBody = await edgeFnRes.text();
+        console.error("[checkout] Edge function error:", edgeFnRes.status, errBody);
+
+        // Mark invoice as needing manual payment
+        await supabase
+          .from("invoices")
+          .update({ provider: "manual" })
+          .eq("id", invoice.id);
+
+        return NextResponse.json({
+          invoiceId: invoice.id,
+          xenditInvoiceUrl: null,
+          error: "Pembayaran online gagal diproses. Anda bisa bayar manual dari dashboard.",
+        }, { status: 200 });
+      }
+
+      const edgeResult = await edgeFnRes.json();
+
       return NextResponse.json({
         invoiceId: invoice.id,
-        xenditInvoiceUrl: null,
-        message: "Invoice dibuat. Pembayaran online belum tersedia, hubungi admin.",
+        xenditInvoiceUrl: edgeResult.invoice_url,
       });
-    }
+    } catch (edgeErr) {
+      console.error("[checkout] Edge function call failed:", edgeErr);
 
-    const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";
-    const externalId = `storo-${invoice.id}`;
-
-    const xenditPayload = {
-      external_id: externalId,
-      amount: setupAmount,
-      currency: "IDR",
-      description,
-      customer: {
-        given_names: fullName.trim(),
-        email: email.trim(),
-        mobile_number: phone.trim().startsWith("+62")
-          ? phone.trim()
-          : `+62${phone.trim().replace(/^0/, "")}`,
-      },
-      customer_notification_preference: {
-        invoice_created: ["whatsapp", "email"],
-        invoice_reminder: ["whatsapp", "email"],
-        invoice_paid: ["whatsapp", "email"],
-      },
-      success_redirect_url: `${APP_URL}/payment/success?invoice_id=${invoice.id}`,
-      failure_redirect_url: `${APP_URL}/payment/failed?invoice_id=${invoice.id}`,
-      invoice_duration: 86400 * 3, // 3 days
-      payment_methods: ["BANK_TRANSFER", "EWALLET", "QR_CODE", "CREDIT_CARD"],
-      locale: "id",
-      items: [
-        {
-          name: description,
-          quantity: 1,
-          price: setupAmount,
-          category: "Service",
-        },
-      ],
-    };
-
-    const xenditResponse = await fetch("https://api.xendit.co/v2/invoices", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(XENDIT_SECRET_KEY + ":").toString("base64")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(xenditPayload),
-    });
-
-    if (!xenditResponse.ok) {
-      const errText = await xenditResponse.text();
-      console.error("[checkout] Xendit API error:", xenditResponse.status, errText);
-
-      // Mark invoice as needing manual payment
       await supabase
         .from("invoices")
         .update({ provider: "manual" })
@@ -283,29 +275,8 @@ export async function POST(request: NextRequest) {
         invoiceId: invoice.id,
         xenditInvoiceUrl: null,
         error: "Pembayaran online gagal diproses. Anda bisa bayar manual dari dashboard.",
-      }, { status: 200 }); // 200 because account + invoice were created successfully
+      }, { status: 200 });
     }
-
-    const xenditInvoice = await xenditResponse.json();
-
-    // Update invoice with Xendit metadata
-    await supabase
-      .from("invoices")
-      .update({
-        provider: "xendit",
-        provider_ref: xenditInvoice.id,
-        metadata: {
-          xendit_invoice_id: xenditInvoice.id,
-          xendit_invoice_url: xenditInvoice.invoice_url,
-          xendit_external_id: externalId,
-        },
-      })
-      .eq("id", invoice.id);
-
-    return NextResponse.json({
-      invoiceId: invoice.id,
-      xenditInvoiceUrl: xenditInvoice.invoice_url,
-    });
   } catch (err) {
     console.error("[checkout] Unexpected error:", err);
     return NextResponse.json(

@@ -26,16 +26,6 @@ export default async function AllStoresPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/sign-in");
-
-  const { data: adminUser } = await supabase
-    .from("superadmin_users")
-    .select("id, role")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  if (!adminUser) redirect("/sign-in");
-
   const { data: stores } = await supabase
     .from("onboarding_requests")
     .select("id, status, plan, template_name, store_url, created_at, clients(full_name, user_id)")

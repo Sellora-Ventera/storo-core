@@ -53,7 +53,7 @@ src/
 ├── components/
 │   └── onboarding/       # OnboardingWizard.tsx (5-step wizard utama)
 ├── lib/
-│   ├── auth/             # Abstraction layer auth (swap supabase/clerk)
+│   ├── auth/             # Wrapper tipis di atas Supabase Auth
 │   ├── supabase/         # Setup Supabase client (server + browser)
 │   ├── plans.ts          # Single source of truth: plan data & pricing
 │   ├── dal.ts            # Data access layer
@@ -68,7 +68,7 @@ src/
 
 ## Keputusan Utama
 
-- Auth: Supabase Auth (bukan Clerk) — single source of truth, RLS bekerja native
+- Auth: Supabase Auth — single source of truth, RLS bekerja native. Dipakai di kedua repo (storo.id + storoengine admin).
 - Namecheap: Mock API dulu, key asli diberikan owner nanti
 - Notifikasi client: Hanya SATU trigger — saat `onboarding_requests.status = 'live'`
 - Source of truth storoengine: `PTVENTERA-AI/storoengine` (private org)
@@ -89,6 +89,7 @@ src/
 - **Plan data terpusat:** `src/lib/plans.ts` adalah single source of truth untuk 5 plan (Starter, Pro, Advance, Flexible, Custom). Diimpor oleh: OnboardingWizard, pricing page, checkout API route.
 - **Checkout API route:** `POST /api/onboarding/checkout` memanggil Xendit API langsung (bukan via edge function `xendit-create-invoice` yang butuh auth token). Env: `XENDIT_SECRET_KEY`.
 - **Landing page CTA:** Semua CTA utama (Hero, Header, Pricing, Solution, Problem, ClosingCTA) mengarah ke `/onboarding`, bukan `/sign-up` atau WhatsApp.
+- **Template Live Preview Deployment:** Panel `/superadmin/templates` mengizinkan tim VenteraAI menambah template storoengine yang otomatis di-deploy ke Vercel + DNS Cloudflare, menghasilkan live demo `{slug}.preview.storo.id`. Customer-facing `/templates` hanya menampilkan template `is_active=true AND deploy_status='live'`. Komponen: `src/lib/integrations/{vercel,cloudflare}.ts` (wrapper REST), `src/lib/template-deployer.ts` (orchestrator), `src/lib/template-seeder.ts` (dummy data ke schema storoengine via `stores.slug='preview-{slug}'`), `src/components/superadmin/{TemplateCard,TemplateDeployModal}.tsx`, API routes `src/app/api/superadmin/templates/*`. Auth check via helper `src/lib/auth/superadmin.ts` (`requireSuperadmin()`). Status lifecycle: `draft → deploying → live | failed | taking_down`. Async pattern: polling UI tiap 3-4 detik ke `GET /api/superadmin/templates/[id]/status` (yang internal panggil `pollDeploymentStatus()` ke Vercel API). Migrasi: `supabase/migrations/20260415000000_template_deployment.sql` (extend tabel `templates` + tabel baru `template_deployment_logs` + bucket `template-thumbnails`). Env: `VERCEL_API_TOKEN`, `VERCEL_TEAM_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, `PREVIEW_DOMAIN_SUFFIX`, `STOROENGINE_REPO`. **Kolom kritis:** `templates.preview_image_url` = thumbnail statis di Supabase Storage `template-thumbnails`, BUKAN `preview_url` (UI lama bug — sudah di-fix). `templates.demo_url` = URL live hasil deploy. Cloudflare DNS `proxied=false` (grey cloud) supaya Vercel issue SSL Let's Encrypt sendiri. Spesifikasi lengkap: `docs/TEMPLATE-DEPLOYMENT-PRD.md`.
 
 ## Flow Registrasi (Order-First)
 

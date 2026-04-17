@@ -16,9 +16,11 @@ const WA_LINK = "https://wa.me/6285157406969";
 interface TemplateItem {
   id: string;
   name: string;
+  display_name?: string | null;
   description: string;
-  preview_url: string | null;
+  preview_image_url: string | null;
   demo_url: string | null;
+  category?: string | null;
   tags?: string[];
 }
 
@@ -27,7 +29,7 @@ const fallbackTemplates: TemplateItem[] = [
     id: "1",
     name: "Minimalist",
     description: "Desain bersih dan modern untuk toko fashion & lifestyle",
-    preview_url: null,
+    preview_image_url: null,
     demo_url: null,
     tags: ["Fashion", "Lifestyle", "Minimalis"],
   },
@@ -35,7 +37,7 @@ const fallbackTemplates: TemplateItem[] = [
     id: "2",
     name: "Bold Commerce",
     description: "Tampilan dinamis dan eye-catching untuk produk consumer",
-    preview_url: null,
+    preview_image_url: null,
     demo_url: null,
     tags: ["FMCG", "Makanan", "Bold"],
   },
@@ -43,7 +45,7 @@ const fallbackTemplates: TemplateItem[] = [
     id: "3",
     name: "Classic Shop",
     description: "Gaya klasik yang membangun kepercayaan pelanggan",
-    preview_url: null,
+    preview_image_url: null,
     demo_url: null,
     tags: ["Terpercaya", "Klasik", "Semua kategori"],
   },
@@ -51,7 +53,7 @@ const fallbackTemplates: TemplateItem[] = [
     id: "4",
     name: "Modern Store",
     description: "Template modern dengan fitur lengkap untuk toko besar",
-    preview_url: null,
+    preview_image_url: null,
     demo_url: null,
     tags: ["Modern", "Lengkap", "Enterprise"],
   },
@@ -66,8 +68,11 @@ export default async function TemplatesPage() {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
       .from("templates")
-      .select("id, name, description, preview_url, demo_url, is_active")
-      .eq("is_active", true);
+      .select(
+        "id, name, display_name, description, preview_image_url, demo_url, category, is_active, deploy_status",
+      )
+      .eq("is_active", true)
+      .eq("deploy_status", "live");
     templates = data as TemplateItem[] | null;
   } catch {
     // Supabase not available or table doesn't exist — use fallback
@@ -136,10 +141,10 @@ export default async function TemplatesPage() {
               >
                 {/* Preview area */}
                 <div className="aspect-video bg-gradient-to-br from-primary/10 to-secondary/10 relative overflow-hidden rounded-t-xl">
-                  {template.preview_url ? (
+                  {template.preview_image_url ? (
                     <Image
-                      src={template.preview_url}
-                      alt={template.name}
+                      src={template.preview_image_url}
+                      alt={template.display_name ?? template.name}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 50vw, 33vw"
@@ -159,16 +164,21 @@ export default async function TemplatesPage() {
                 {/* Card body */}
                 <div className="p-5 flex flex-col flex-1">
                   <h2 className="font-semibold text-foreground text-base mb-1.5">
-                    {template.name}
+                    {template.display_name ?? template.name}
                   </h2>
                   <p className="text-sm text-gray-500 mb-3 leading-relaxed flex-1">
                     {template.description}
                   </p>
 
-                  {/* Tags */}
-                  {template.tags && template.tags.length > 0 && (
+                  {/* Category / tags */}
+                  {(template.category || (template.tags && template.tags.length > 0)) && (
                     <div className="flex flex-wrap gap-1.5 mb-4">
-                      {template.tags.map((tag) => (
+                      {template.category && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/8 text-primary font-medium border border-primary/15">
+                          {template.category}
+                        </span>
+                      )}
+                      {template.tags?.map((tag) => (
                         <span
                           key={tag}
                           className="text-xs px-2 py-0.5 rounded-full bg-primary/8 text-primary font-medium border border-primary/15"
