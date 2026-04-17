@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducer, useRef, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ type State = {
   plan: PlanId | "";
   // Step 2: Domain
   websiteName: string; // slug for <slug>.storo.id
+  customDomain: string; // selected custom domain (e.g. "namatoko.com"), empty = subdomain only
   // Step 3: Profile
   fullName: string;
   storeName: string;
@@ -91,11 +92,13 @@ const STEP_META = [
 // ── Root Wizard ──────────────────────────────────────────────────────────
 export default function OnboardingWizard() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [state, dispatch] = useReducer(reducer, {
     step: 1,
-    plan: "",
+    plan: "pro" as PlanId,
     websiteName: "",
+    customDomain: "",
     fullName: "",
     storeName: "",
     phone: "",
@@ -107,13 +110,39 @@ export default function OnboardingWizard() {
     xenditInvoiceUrl: "",
   });
 
-  // Pre-select plan from ?plan= query param
+  // Restore state from query params on mount
   useEffect(() => {
     const planParam = searchParams.get("plan");
-    if (planParam && getPlan(planParam)) {
-      dispatch({ type: "UPDATE", payload: { plan: planParam as PlanId } });
+    const stepParam = searchParams.get("step");
+    const websiteParam = searchParams.get("website");
+    const domainParam = searchParams.get("domain");
+
+    const restore: Partial<State> = {};
+    if (planParam && getPlan(planParam)) restore.plan = planParam as PlanId;
+    if (stepParam) {
+      const s = parseInt(stepParam, 10);
+      if (s >= 1 && s <= 5) restore.step = s as Step;
+    }
+    if (websiteParam) restore.websiteName = websiteParam;
+    if (domainParam) restore.customDomain = domainParam;
+
+    if (Object.keys(restore).length > 0) {
+      dispatch({ type: "UPDATE", payload: restore });
     }
   }, [searchParams]);
+
+  // Sync state to URL query params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (state.step > 1) params.set("step", String(state.step));
+    if (state.plan) params.set("plan", state.plan);
+    if (state.websiteName) params.set("website", state.websiteName);
+    if (state.customDomain) params.set("domain", state.customDomain);
+
+    const qs = params.toString();
+    const newUrl = qs ? `/onboarding?${qs}` : "/onboarding";
+    router.replace(newUrl, { scroll: false });
+  }, [state.step, state.plan, state.websiteName, state.customDomain, router]);
 
   // Pick up referral code from sessionStorage
   const [referralCode, setReferralCode] = useState<string | null>(null);
@@ -352,7 +381,7 @@ function Step2Domain({
 
   const handleChange = (value: string) => {
     const slug = slugify(value);
-    update({ websiteName: slug });
+    update({ websiteName: slug, customDomain: "" });
     setError("");
 
     // Auto-search after typing stops
@@ -387,6 +416,10 @@ function Step2Domain({
     }
     if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(state.websiteName.trim())) {
       setError("Hanya huruf kecil, angka, dan tanda hubung (-)");
+      return;
+    }
+    if (!state.customDomain) {
+      setError("Pilih salah satu domain terlebih dahulu");
       return;
     }
     setError("");
@@ -427,37 +460,56 @@ function Step2Domain({
           <div>
             <p className="text-xs text-gray-500 mb-2 font-medium">Mau custom domain? Cek ketersediaan:</p>
             <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
-              {results.map((r) => (
-                <div
-                  key={r.fullDomain}
-                  className={`flex items-center justify-between px-4 py-2.5 text-sm ${
-                    r.available ? "bg-white" : "bg-gray-50 opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {r.available ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-gray-300 shrink-0" />
-                    )}
-                    <span className={r.available ? "text-gray-900 font-medium" : "text-gray-400"}>
-                      {r.fullDomain}
-                    </span>
-                  </div>
-                  {r.available ? (
-                    <div className="text-right">
-                      <span className="text-primary font-semibold text-sm">{formatIDR(r.price)}</span>
-                      <span className="text-gray-400 text-[10px]">/thn</span>
+              {results.map((r) => {
+                const isSelected = r.available && state.customDomain === r.fullDomain;
+                return (
+                  <button
+                    key={r.fullDomain}
+                    type="button"
+                    disabled={!r.available}
+                    onClick={() => {
+                      if (!r.available) return;
+                      update({ customDomain: isSelected ? "" : r.fullDomain });
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors cursor-pointer
+                      ${isSelected
+                        ? "bg-primary/5 ring-1 ring-inset ring-primary"
+                        : r.available
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-gray-50 opacity-60 cursor-not-allowed"
+                      }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {r.available ? (
+                        <CheckCircle2 className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-green-500"}`} />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-gray-300 shrink-0" />
+                      )}
+                      <span className={isSelected ? "text-primary font-semibold" : r.available ? "text-gray-900 font-medium" : "text-gray-400"}>
+                        {r.fullDomain}
+                      </span>
                     </div>
-                  ) : (
-                    <span className="text-[10px] text-red-400 font-medium">Tidak tersedia</span>
-                  )}
-                </div>
-              ))}
+                    {r.available ? (
+                      <div className="text-right flex items-center gap-1.5">
+                        <span className="text-gray-400 line-through text-xs">{formatIDR(r.price)}</span>
+                        <span className="text-green-600 font-semibold text-sm">Gratis</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-red-400 font-medium">Tidak tersedia</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[11px] text-gray-400 mt-2">
-              Custom domain bisa ditambahkan nanti dari dashboard. Lanjutkan dulu dengan subdomain gratis.
-            </p>
+            {state.customDomain ? (
+              <p className="text-[11px] text-primary mt-2 font-medium">
+                Domain <strong>{state.customDomain}</strong> akan dikonfigurasi untuk toko Anda. Klik lagi untuk membatalkan.
+              </p>
+            ) : (
+              <p className="text-[11px] text-gray-400 mt-2">
+                Pilih domain gratis di atas, atau lanjutkan dengan subdomain <strong>{state.websiteName}.storo.id</strong>.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -473,7 +525,8 @@ function Step2Domain({
         </Button>
         <Button
           onClick={handleNext}
-          className="flex-1 bg-primary text-white hover:bg-primary/90 h-11 text-sm font-semibold cursor-pointer"
+          disabled={!state.customDomain}
+          className="flex-1 bg-primary text-white hover:bg-primary/90 h-11 text-sm font-semibold cursor-pointer disabled:opacity-50"
         >
           Lanjut Isi Profil
           <ArrowRight className="w-4 h-4 ml-2" />
@@ -624,7 +677,27 @@ function Step4Account({
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Auto-detect existing session (e.g. user clicked "Kembali" from step 5)
+  useEffect(() => {
+    if (state.authMethod === "google" && state.email) return; // already set
+    (async () => {
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const isGoogle = session.user.app_metadata?.provider === "google";
+        update({
+          email: session.user.email || "",
+          authMethod: isGoogle ? "google" : "email",
+        });
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const validate = () => {
+    // Google auth — email sudah terisi dari session, skip password
+    if (state.authMethod === "google" && state.email) return true;
+
     const e: Record<string, string> = {};
     if (!state.email.trim()) {
       e.email = "Email wajib diisi";
@@ -644,7 +717,7 @@ function Step4Account({
     if (validate()) onNext();
   };
 
-  const handleGoogleSignUpPopup = async () => {
+  const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
     const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
     const supabase = getSupabaseBrowserClient();
@@ -662,27 +735,19 @@ function Step4Account({
     }
 
     // Open popup
-    const width = 500;
-    const height = 600;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-    const popup = window.open(
-      data.url,
-      "google-auth",
-      `width=${width},height=${height},left=${left},top=${top},popup=yes`
-    );
+    const w = 500, h = 600;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top = window.screenY + (window.outerHeight - h) / 2;
+    const popup = window.open(data.url, "google-auth", `width=${w},height=${h},left=${left},top=${top},popup=yes`);
 
-    // Listen for message from popup
+    // Listen for postMessage from popup callback
     const handler = async (event: MessageEvent) => {
       if (event.origin !== location.origin) return;
       if (event.data?.type === "AUTH_COMPLETE") {
         cleanup();
-        const { data: session } = await supabase.auth.getSession();
-        if (session?.session?.user) {
-          update({
-            email: session.session.user.email || "",
-            authMethod: "google",
-          });
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess?.session?.user) {
+          update({ email: sess.session.user.email || "", authMethod: "google" });
           onNext();
         }
         setGoogleLoading(false);
@@ -694,17 +759,14 @@ function Step4Account({
     };
     window.addEventListener("message", handler);
 
-    // Fallback: poll for popup manually closed without postMessage
-    const pollClosed = setInterval(() => {
-      if (popup?.closed) {
-        cleanup();
-        setGoogleLoading(false);
-      }
+    // Poll: if user closes popup manually
+    const poll = setInterval(() => {
+      if (popup?.closed) { cleanup(); setGoogleLoading(false); }
     }, 500);
 
     function cleanup() {
       window.removeEventListener("message", handler);
-      clearInterval(pollClosed);
+      clearInterval(poll);
     }
   };
 
@@ -717,71 +779,96 @@ function Step4Account({
         </p>
       </div>
 
-      {/* Google Sign Up */}
-      <button
-        type="button"
-        onClick={handleGoogleSignUpPopup}
-        disabled={googleLoading}
-        className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border-2 border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer disabled:opacity-50"
-      >
-        {googleLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <GoogleIcon />
-        )}
-        {googleLoading ? "Menghubungkan..." : "Daftar dengan Google"}
-      </button>
-
-      {/* Divider */}
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-xs text-gray-400">atau daftar dengan email</span>
-        </div>
-      </div>
-
-      <div className="space-y-5">
-        {/* Email */}
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-          <Input
-            id="email"
-            type="email"
-            value={state.email}
-            onChange={(e) => update({ email: e.target.value })}
-            placeholder="nama@email.com"
-            autoComplete="email"
-          />
-          {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
-        </div>
-
-        {/* Password */}
-        <div className="space-y-1.5">
-          <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              value={state.password}
-              onChange={(e) => update({ password: e.target.value })}
-              placeholder="Minimal 8 karakter"
-              autoComplete="new-password"
-              className="pr-10"
-            />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-              onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+      {state.authMethod === "google" && state.email ? (
+        /* Already logged in with Google */
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+          <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-green-800">Terhubung dengan Google</p>
+            <p className="text-xs text-green-600 truncate">{state.email}</p>
           </div>
-          {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
+          <button
+            type="button"
+            onClick={async () => {
+              const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+              const supabase = getSupabaseBrowserClient();
+              await supabase.auth.signOut();
+              update({ email: "", password: "", authMethod: "" });
+            }}
+            className="text-xs text-gray-500 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            Ganti akun
+          </button>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Google Sign Up */}
+          <button
+            type="button"
+            onClick={handleGoogleSignUp}
+            disabled={googleLoading}
+            className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border-2 border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {googleLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <GoogleIcon />
+            )}
+            {googleLoading ? "Menghubungkan..." : "Daftar dengan Google"}
+          </button>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-3 text-xs text-gray-400">atau daftar dengan email</span>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+              <Input
+                id="email"
+                type="email"
+                value={state.email}
+                onChange={(e) => update({ email: e.target.value })}
+                placeholder="nama@email.com"
+                autoComplete="email"
+              />
+              {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={state.password}
+                  onChange={(e) => update({ password: e.target.value })}
+                  placeholder="Minimal 8 karakter"
+                  autoComplete="new-password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex gap-3 mt-6">
         <Button
@@ -850,6 +937,7 @@ function Step5Summary({
           storeName: state.storeName,
           plan: state.plan,
           selectedDomain: `${state.websiteName}.storo.id`,
+          customDomain: state.customDomain || undefined,
           email: state.email,
           password: state.authMethod === "google" ? undefined : state.password,
           authMethod: state.authMethod || "email",
@@ -892,7 +980,7 @@ function Step5Summary({
       <div className="bg-gray-50 rounded-xl p-5 space-y-3">
         <SummaryRow label="Nama" value={state.fullName} />
         <SummaryRow label="Nama Toko" value={state.storeName} />
-        <SummaryRow label="Website" value={`${state.websiteName}.storo.id`} />
+        <SummaryRow label="Website" value={state.customDomain || `${state.websiteName}.storo.id`} />
         <SummaryRow label="WhatsApp" value={state.phone} />
         <SummaryRow label="Email" value={state.email} />
         {state.shopeeStoreLink && <SummaryRow label="Shopee" value={state.shopeeStoreLink} />}
@@ -911,11 +999,6 @@ function Step5Summary({
             </div>
           </>
         )}
-
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Domain</span>
-          <span className="text-sm font-medium text-gray-900">{state.websiteName}.storo.id</span>
-        </div>
 
         <div className="border-t border-gray-200 pt-3 mt-3" />
 
@@ -1022,6 +1105,12 @@ function Step6Success({ state }: { state: State }) {
           <span className="text-xs text-gray-500">Website</span>
           <span className="text-sm font-medium text-gray-900">{state.websiteName}.storo.id</span>
         </div>
+        {state.customDomain && (
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500">Custom Domain</span>
+            <span className="text-sm font-medium text-gray-900">{state.customDomain}</span>
+          </div>
+        )}
       </div>
 
       {/* CTA: pay from dashboard if Xendit failed */}

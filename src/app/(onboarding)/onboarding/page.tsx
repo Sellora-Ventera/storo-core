@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 
 export default function OnboardingPage() {
   return (
-    <div className="font-inter min-h-screen bg-gradient-to-br from-primary/5 via-white to-secondary/5">
+    <div className="font-inter min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-white to-secondary/5">
       <Header />
-      <main className="pt-24 pb-16">
+      <main className="pt-24 pb-16 flex-1">
         <OnboardingWizard />
       </main>
       <Footer />
