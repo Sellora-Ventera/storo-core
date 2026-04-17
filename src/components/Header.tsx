@@ -78,6 +78,9 @@ const Header = () => {
                 </Link>
               )
             )}
+            <Button asChild variant="ghost" className="cursor-pointer">
+              <Link href="/sign-in">Masuk</Link>
+            </Button>
             <Button asChild className="btn-hero">
               <Link href="/onboarding">Pesan Toko</Link>
             </Button>
@@ -122,9 +125,16 @@ const Header = () => {
                   </Link>
                 )
               )}
-              <div className="px-3 py-2">
+              <div className="px-3 py-2 space-y-2">
+                <Button asChild variant="outline" className="w-full cursor-pointer">
+                  <Link href="/sign-in" onClick={() => setIsMenuOpen(false)}>
+                    Masuk
+                  </Link>
+                </Button>
                 <Button asChild className="btn-hero w-full">
-                  <Link href="/onboarding">Pesan Toko</Link>
+                  <Link href="/onboarding" onClick={() => setIsMenuOpen(false)}>
+                    Pesan Toko
+                  </Link>
                 </Button>
               </div>
             </div>
