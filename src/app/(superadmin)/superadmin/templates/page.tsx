@@ -24,7 +24,10 @@ export default function TemplatesPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [screenshotErrors, setScreenshotErrors] = useState<Record<string, string>>({});
   const pollingActiveRef = useRef(false);
+  const backfillInflightRef = useRef(false);
+  const backfillDoneRef = useRef(false);
 
   const fetchTemplates = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -65,6 +68,42 @@ export default function TemplatesPage() {
       supabase.removeChannel(channel);
     };
   }, [fetchTemplates]);
+
+  // Backfill screenshots for live templates that are missing preview_image_url.
+  // Fire-and-forget; page stays interactive. Runs once per mount.
+  useEffect(() => {
+    if (loading || backfillDoneRef.current || backfillInflightRef.current) return;
+    const needsBackfill = templates.some(
+      (t) => t.deploy_status === "live" && !!t.demo_url && !t.preview_image_url,
+    );
+    if (!needsBackfill) return;
+
+    backfillInflightRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/superadmin/templates/backfill-screenshots", {
+          method: "POST",
+        });
+        if (!res.ok) return;
+        const payload = (await res.json()) as {
+          results: Array<{ id: string; success: boolean; url?: string; error?: string }>;
+        };
+        const errors: Record<string, string> = {};
+        let anySuccess = false;
+        for (const r of payload.results ?? []) {
+          if (r.success) anySuccess = true;
+          else if (r.error) errors[r.id] = r.error;
+        }
+        setScreenshotErrors(errors);
+        if (anySuccess) await fetchTemplates();
+      } catch {
+        // Ignore network errors; user can refresh to retry.
+      } finally {
+        backfillInflightRef.current = false;
+        backfillDoneRef.current = true;
+      }
+    })();
+  }, [templates, loading, fetchTemplates]);
 
   // Poll Vercel-side status for any deploying template (forces DB update).
   // Realtime only reflects DB changes; we still need to nudge Vercel to sync.
@@ -278,6 +317,7 @@ export default function TemplatesPage() {
             <div key={t.id} className={busyId === t.id ? "opacity-60 pointer-events-none" : ""}>
               <TemplateCard
                 template={t}
+                screenshotError={screenshotErrors[t.id] ?? null}
                 onEdit={handleEdit}
                 onRedeploy={handleRedeploy}
                 onTakedown={handleTakedown}

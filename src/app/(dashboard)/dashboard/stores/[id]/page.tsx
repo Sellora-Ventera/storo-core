@@ -10,15 +10,77 @@ import {
   ExternalLink,
   MessageCircle,
   AlertTriangle,
+  Store,
+  Globe,
+  Calendar,
+  LayoutTemplate,
+  UserCog,
+  Upload,
+  MessageSquare,
+  Loader2,
+  AlertCircle,
+  FileText,
+  Download,
+  Receipt,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
+import { PLANS } from "@/lib/plans";
 
-const STATUS_CONFIG = {
-  pending: { label: "Menunggu Konfirmasi", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-  reviewing: { label: "Sedang Direview", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  in_progress: { label: "Dalam Proses Setup", color: "bg-orange-100 text-orange-700 border-orange-200" },
-  live: { label: "Toko Aktif", color: "bg-green-100 text-green-700 border-green-200" },
-  rejected: { label: "Perlu Perbaikan Data", color: "bg-red-100 text-red-700 border-red-200" },
-} as const;
+type StatusKey = "pending" | "reviewing" | "in_progress" | "live" | "rejected";
+
+const STATUS_CONFIG: Record<
+  StatusKey,
+  {
+    label: string;
+    color: string;
+    icon: typeof Clock;
+    spin: boolean;
+    description: string;
+    eta: string;
+  }
+> = {
+  pending: {
+    label: "Menunggu Konfirmasi",
+    color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    icon: Clock,
+    spin: false,
+    description: "Data onboarding Anda sudah kami terima. Tim kami akan segera menghubungi Anda.",
+    eta: "Estimasi review: 1-2 jam kerja",
+  },
+  reviewing: {
+    label: "Sedang Direview",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
+    icon: Loader2,
+    spin: true,
+    description: "Tim VenteraAI sedang memeriksa data toko & produk Anda dari Shopee.",
+    eta: "Estimasi: 1-2 hari kerja",
+  },
+  in_progress: {
+    label: "Dalam Proses Setup",
+    color: "bg-orange-100 text-orange-700 border-orange-200",
+    icon: Loader2,
+    spin: true,
+    description: "Engineer kami sedang menyiapkan toko, template, & import produk Anda.",
+    eta: "Estimasi: 2-3 hari kerja",
+  },
+  live: {
+    label: "Toko Aktif",
+    color: "bg-green-100 text-green-700 border-green-200",
+    icon: CheckCircle2,
+    spin: false,
+    description: "Toko Anda sudah aktif & siap menerima pesanan!",
+    eta: "",
+  },
+  rejected: {
+    label: "Perlu Perbaikan Data",
+    color: "bg-red-100 text-red-700 border-red-200",
+    icon: AlertCircle,
+    spin: false,
+    description: "Ada data yang perlu diperbaiki. Silakan hubungi tim kami.",
+    eta: "",
+  },
+};
 
 const TIMELINE_STEPS = [
   { key: "pending", label: "Permintaan Diterima", description: "Data onboarding Anda telah kami terima." },
@@ -30,15 +92,39 @@ const TIMELINE_STEPS = [
 const STATUS_ORDER = ["pending", "reviewing", "in_progress", "live"] as const;
 
 function getCompletedIndex(status: string): number {
-  if (status === "rejected") return 1; // stuck at reviewing
-  return STATUS_ORDER.indexOf(status as (typeof STATUS_ORDER)[number]);
+  if (status === "rejected") return 1;
+  const idx = STATUS_ORDER.indexOf(status as (typeof STATUS_ORDER)[number]);
+  return idx === -1 ? 0 : idx;
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  starter: "Starter",
-  business: "Business",
-  enterprise: "Enterprise",
+const PLAN_NAME_MAP = Object.fromEntries(PLANS.map((p) => [p.id, p.name]));
+const PLAN_SETUP_MAP = Object.fromEntries(PLANS.map((p) => [p.id, p.setup]));
+
+const INVOICE_STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; icon: typeof Clock }
+> = {
+  paid: { label: "Lunas", color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle2 },
+  pending: { label: "Menunggu Pembayaran", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock },
+  expired: { label: "Kadaluarsa", color: "bg-red-100 text-red-700 border-red-200", icon: AlertCircle },
+  failed: { label: "Gagal", color: "bg-red-100 text-red-700 border-red-200", icon: AlertCircle },
 };
+
+function formatIDR(amount: number | null): string {
+  if (amount == null) return "—";
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+interface UploadedFile {
+  name?: string;
+  url?: string;
+  size?: number;
+}
 
 export default async function StoreDetailPage({
   params,
@@ -61,62 +147,102 @@ export default async function StoreDetailPage({
 
   const { data: store } = await supabase
     .from("onboarding_requests")
-    .select("id, status, store_url, plan, template_name, created_at, domain, subdomain")
+    .select(
+      "id, status, store_url, plan, template_name, template_id, created_at, live_at, updated_at, requested_slug, custom_domain, status_note, assigned_engineer, files_uploaded, upload_method, client_id, store_id"
+    )
     .eq("id", id)
     .eq("client_id", client.id)
     .single();
 
   if (!store) notFound();
 
-  const status = (store.status as keyof typeof STATUS_CONFIG) ?? "pending";
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id, amount, status, paid_at, invoice_url, type, provider, due_date, created_at")
+    .eq("client_id", client.id)
+    .eq("type", "setup")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const status = (store.status as StatusKey) ?? "pending";
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
+  const StatusIcon = statusCfg.icon;
   const completedIndex = getCompletedIndex(status);
 
+  const planName = PLAN_NAME_MAP[store.plan] ?? store.plan ?? "—";
+  const planSetup = PLAN_SETUP_MAP[store.plan] ?? null;
+
+  const subdomainPreview = store.requested_slug ? `${store.requested_slug}.storo.id` : null;
+  const storeName = store.requested_slug ?? store.custom_domain ?? "Toko";
+
+  const filesRaw = (store.files_uploaded ?? []) as unknown;
+  const files: UploadedFile[] = Array.isArray(filesRaw) ? (filesRaw as UploadedFile[]) : [];
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Back + Header */}
-      <div className="flex items-start gap-4">
-        <Button asChild variant="ghost" size="sm" className="mt-1 cursor-pointer text-gray-500 hover:text-gray-900">
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Back */}
+      <div>
+        <Button asChild variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-900 -ml-2">
           <Link href="/dashboard/stores">
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Kembali
+            Kembali ke Semua Toko
           </Link>
         </Button>
       </div>
 
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Paket {PLAN_LABELS[store.plan] ?? store.plan}
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Dibuat pada{" "}
-            {new Date(store.created_at).toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
+      {/* Header */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-4 min-w-0 flex-1">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Store className="w-6 h-6 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900 capitalize truncate">{storeName}</h1>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-100">
+                  Paket {planName}
+                </span>
+                {store.template_name && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full border bg-gray-50 text-gray-700 border-gray-200 capitalize">
+                    <LayoutTemplate className="w-3 h-3" />
+                    {store.template_name}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Dipesan {formatDate(store.created_at)}
+                </span>
+              </div>
+            </div>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border flex-shrink-0 ${statusCfg.color}`}>
+            <StatusIcon className={`w-4 h-4 ${statusCfg.spin ? "animate-spin" : ""}`} />
+            {statusCfg.label}
+          </span>
         </div>
-        <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border ${statusCfg.color}`}>
-          {statusCfg.label}
-        </span>
       </div>
 
-      {/* Rejected warning */}
+      {/* Contextual alert */}
       {status === "rejected" && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-yellow-900 text-sm mb-1">Ada data yang perlu diperbaiki</p>
-            <p className="text-yellow-700 text-sm">
-              Ada data yang perlu diperbaiki. Hubungi tim kami melalui WhatsApp.
-            </p>
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-red-900 text-sm mb-1">Ada data yang perlu diperbaiki</p>
+            {store.status_note ? (
+              <div className="bg-white border border-red-100 rounded-lg p-3 mt-2">
+                <p className="text-xs font-semibold text-red-800 mb-0.5">Catatan dari tim:</p>
+                <p className="text-sm text-red-700">{store.status_note}</p>
+              </div>
+            ) : (
+              <p className="text-red-700 text-sm">Hubungi tim kami melalui WhatsApp untuk detail perbaikan.</p>
+            )}
             <a
               href="https://wa.me/6285157406969"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-3 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 mt-3 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
             >
               <MessageCircle className="w-4 h-4" />
               Chat via WhatsApp
@@ -125,25 +251,35 @@ export default async function StoreDetailPage({
         </div>
       )}
 
-      {/* Live CTA */}
       {status === "live" && store.store_url && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-            <div>
+            <div className="min-w-0">
               <p className="font-semibold text-green-900 text-sm">Toko Anda sudah aktif!</p>
-              <p className="text-green-700 text-sm">{store.store_url}</p>
+              <p className="text-green-700 text-sm truncate">{store.store_url}</p>
             </div>
           </div>
           <a
-            href={store.store_url}
+            href={`${store.store_url.replace(/\/$/, "")}/dashboard`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer flex-shrink-0"
           >
             <ExternalLink className="w-4 h-4" />
-            Kunjungi Toko
+            Buka Dashboard
           </a>
+        </div>
+      )}
+
+      {status !== "live" && status !== "rejected" && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-blue-900 text-sm">{statusCfg.label}</p>
+            <p className="text-blue-800 text-sm mt-0.5">{statusCfg.description}</p>
+            {statusCfg.eta && <p className="text-blue-600 text-xs mt-1">{statusCfg.eta}</p>}
+          </div>
         </div>
       )}
 
@@ -157,10 +293,10 @@ export default async function StoreDetailPage({
             const isCompleted = idx <= completedIndex;
             const isCurrent = idx === completedIndex && status !== "live";
             const isLast = idx === TIMELINE_STEPS.length - 1;
+            const showLiveAt = step.key === "live" && isCompleted && store.live_at;
 
             return (
               <div key={step.key} className="flex gap-4">
-                {/* Icon + line */}
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
@@ -188,22 +324,18 @@ export default async function StoreDetailPage({
                   )}
                 </div>
 
-                {/* Content */}
-                <div className="pb-8 pt-1">
-                  <p
-                    className={`font-semibold text-sm ${
-                      isCompleted ? "text-gray-900" : "text-gray-400"
-                    }`}
-                  >
+                <div className="pb-8 pt-1 min-w-0">
+                  <p className={`font-semibold text-sm ${isCompleted ? "text-gray-900" : "text-gray-400"}`}>
                     {step.label}
                   </p>
-                  <p
-                    className={`text-xs mt-0.5 ${
-                      isCompleted ? "text-gray-500" : "text-gray-300"
-                    }`}
-                  >
+                  <p className={`text-xs mt-0.5 ${isCompleted ? "text-gray-500" : "text-gray-300"}`}>
                     {step.description}
                   </p>
+                  {showLiveAt && (
+                    <p className="text-xs text-green-600 font-medium mt-1">
+                      Aktif sejak {formatDate(store.live_at)}
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -211,58 +343,171 @@ export default async function StoreDetailPage({
         </div>
       </div>
 
-      {/* Store info */}
+      {/* Store info grid */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-5">
           Informasi Toko
         </h2>
-        <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
-          <div>
-            <dt className="text-xs text-gray-500 mb-1">Paket</dt>
-            <dd className="font-medium text-gray-900 text-sm">
-              {PLAN_LABELS[store.plan] ?? store.plan}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-gray-500 mb-1">Template</dt>
-            <dd className="font-medium text-gray-900 text-sm">
-              {store.template_name ?? "—"}
-            </dd>
-          </div>
-          {store.subdomain && (
-            <div>
-              <dt className="text-xs text-gray-500 mb-1">Subdomain</dt>
-              <dd className="font-medium text-gray-900 text-sm">{store.subdomain}</dd>
-            </div>
+        <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-5">
+          <InfoItem
+            icon={Receipt}
+            label="Paket"
+            value={
+              <span>
+                {planName}
+                {planSetup != null && (
+                  <span className="text-gray-400 text-xs font-normal ml-1.5">
+                    · {formatIDR(planSetup)} setup
+                  </span>
+                )}
+              </span>
+            }
+          />
+          {store.template_name && (
+            <InfoItem
+              icon={LayoutTemplate}
+              label="Template"
+              value={<span className="capitalize">{store.template_name}</span>}
+            />
           )}
-          {store.domain && (
-            <div>
-              <dt className="text-xs text-gray-500 mb-1">Domain</dt>
-              <dd className="font-medium text-gray-900 text-sm">{store.domain}</dd>
-            </div>
+          {subdomainPreview && (
+            <InfoItem icon={Globe} label="Subdomain Storo" value={subdomainPreview} />
+          )}
+          {store.custom_domain && (
+            <InfoItem icon={Globe} label="Custom Domain" value={store.custom_domain} />
           )}
           {store.store_url && (
-            <div>
-              <dt className="text-xs text-gray-500 mb-1">URL Toko</dt>
-              <dd className="font-medium text-primary text-sm">
-                <a href={store.store_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            <InfoItem
+              icon={ExternalLink}
+              label="URL Toko Live"
+              value={
+                <a
+                  href={store.store_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline truncate block"
+                >
                   {store.store_url}
                 </a>
-              </dd>
-            </div>
+              }
+            />
           )}
-          <div>
-            <dt className="text-xs text-gray-500 mb-1">Tanggal Dibuat</dt>
-            <dd className="font-medium text-gray-900 text-sm">
-              {new Date(store.created_at).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </dd>
-          </div>
+          <InfoItem
+            icon={UserCog}
+            label="Engineer"
+            value={
+              store.assigned_engineer ? (
+                store.assigned_engineer
+              ) : (
+                <span className="text-gray-400 italic">Sedang dialokasikan</span>
+              )
+            }
+          />
+          {store.upload_method && (
+            <InfoItem
+              icon={store.upload_method === "whatsapp" ? MessageSquare : Upload}
+              label="Metode Upload Data"
+              value={store.upload_method === "whatsapp" ? "Via WhatsApp" : "Via Platform"}
+            />
+          )}
+          <InfoItem icon={Calendar} label="Tanggal Dipesan" value={formatDate(store.created_at)} />
+          {store.live_at && (
+            <InfoItem icon={CheckCircle2} label="Tanggal Live" value={formatDate(store.live_at)} />
+          )}
         </dl>
       </div>
+
+      {/* Invoice */}
+      {invoice && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-5">
+            Status Pembayaran Setup
+          </h2>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Receipt className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 text-lg">{formatIDR(invoice.amount)}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Biaya Setup Paket {planName}</p>
+                {invoice.paid_at && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Dibayar pada {formatDate(invoice.paid_at)}
+                  </p>
+                )}
+                {!invoice.paid_at && invoice.due_date && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Jatuh tempo {formatDate(invoice.due_date)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {(() => {
+                const invCfg = INVOICE_STATUS_CONFIG[invoice.status] ?? INVOICE_STATUS_CONFIG.pending;
+                const InvIcon = invCfg.icon;
+                return (
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border ${invCfg.color}`}>
+                    <InvIcon className="w-3.5 h-3.5" />
+                    {invCfg.label}
+                  </span>
+                );
+              })()}
+              <Button asChild variant="outline" size="sm" className="cursor-pointer">
+                <Link href="/dashboard/billing">
+                  Lihat Billing
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Files uploaded */}
+      {files.length > 0 && store.upload_method !== "whatsapp" && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-5">
+            File yang Di-upload
+          </h2>
+          <div className="space-y-2">
+            {files.map((file, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between gap-3 p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4.5 h-4.5 text-gray-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {file.name ?? `File ${idx + 1}`}
+                    </p>
+                    {file.size != null && (
+                      <p className="text-xs text-gray-400">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {file.url && (
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 cursor-pointer flex-shrink-0"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Help */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4 flex-wrap">
@@ -274,12 +519,32 @@ export default async function StoreDetailPage({
           href="https://wa.me/6285157406969"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
         >
           <MessageCircle className="w-4 h-4" />
           Hubungi via WhatsApp
         </a>
       </div>
+    </div>
+  );
+}
+
+function InfoItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Clock;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
+        <Icon className="w-3.5 h-3.5" />
+        {label}
+      </dt>
+      <dd className="font-medium text-gray-900 text-sm truncate">{value}</dd>
     </div>
   );
 }

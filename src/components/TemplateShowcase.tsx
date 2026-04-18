@@ -22,6 +22,7 @@ const TemplateShowcase = async () => {
       "id, name, display_name, description, preview_image_url, demo_url, category"
     )
     .eq("is_active", true)
+    .eq("deploy_status", "live")
     .order("sort_order", { ascending: true })
     .limit(3);
 

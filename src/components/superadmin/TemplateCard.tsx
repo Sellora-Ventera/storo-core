@@ -73,6 +73,7 @@ const formatRupiah = (n: number | null) =>
 
 interface TemplateCardProps {
   template: TemplateCardData;
+  screenshotError?: string | null;
   onEdit: (template: TemplateCardData) => void;
   onRedeploy: (template: TemplateCardData) => void;
   onTakedown: (template: TemplateCardData) => void;
@@ -82,6 +83,7 @@ interface TemplateCardProps {
 
 export default function TemplateCard({
   template,
+  screenshotError,
   onEdit,
   onRedeploy,
   onTakedown,
@@ -118,6 +120,12 @@ export default function TemplateCard({
             className="object-cover"
             sizes="(max-width:768px) 100vw, 33vw"
           />
+        ) : screenshotError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+            <AlertCircle className="w-8 h-8 text-red-300" />
+            <p className="text-[11px] text-red-500 font-medium">Screenshot gagal</p>
+            <p className="text-[10px] text-red-400 line-clamp-2">{screenshotError}</p>
+          </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <Layers className="w-10 h-10 text-slate-300" />

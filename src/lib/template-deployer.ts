@@ -22,6 +22,7 @@ import {
   seedTemplatePreviewData,
   unseedTemplatePreviewData,
 } from "@/lib/template-seeder";
+import { uploadTemplateScreenshot } from "@/lib/integrations/screenshot";
 
 /**
  * End-to-end orchestrator for template preview deployment lifecycle.
@@ -126,6 +127,7 @@ async function updateTemplate(
     deploy_error?: string | null;
     demo_url?: string;
     deployed_at?: string;
+    preview_image_url?: string;
   },
 ): Promise<void> {
   await supabase.from("templates").update(patch).eq("id", templateId);
@@ -382,10 +384,24 @@ export async function pollDeploymentStatus(templateId: string): Promise<Template
 
     if (vercelState === "READY") {
       const demoUrl = `https://${buildPreviewDomain(template.slug)}`;
+
+      let previewImageUrl: string | null = null;
+      try {
+        previewImageUrl = await uploadTemplateScreenshot(supabase, template.slug, demoUrl);
+        await logStep(supabase, templateId, "status_check", "success", "screenshot", {
+          vercel: { preview_image_url: previewImageUrl },
+        });
+      } catch (err) {
+        await logStep(supabase, templateId, "status_check", "failed", "screenshot", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       await updateTemplate(supabase, templateId, {
         deploy_status: "live",
         demo_url: demoUrl,
         deployed_at: new Date().toISOString(),
+        ...(previewImageUrl ? { preview_image_url: previewImageUrl } : {}),
       });
       await logStep(supabase, templateId, "status_check", "success", "vercel_ready", {
         vercel: { id: status.id, state: vercelState, url: status.url },

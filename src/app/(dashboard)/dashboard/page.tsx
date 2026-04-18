@@ -1,16 +1,67 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Store, Package, ShoppingBag, Clock, CheckCircle2, AlertCircle, Loader2Icon } from "lucide-react";
+import {
+  Store,
+  Package,
+  ShoppingBag,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Loader2Icon,
+  Globe,
+  Calendar,
+  ArrowRight,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const STATUS_CONFIG = {
-  pending: { label: "Menunggu Konfirmasi", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock },
-  reviewing: { label: "Sedang Direview", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Loader2Icon },
-  in_progress: { label: "Dalam Proses Setup", color: "bg-orange-100 text-orange-700 border-orange-200", icon: Loader2Icon },
-  live: { label: "Toko Aktif", color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle2 },
-  rejected: { label: "Perlu Perbaikan Data", color: "bg-red-100 text-red-700 border-red-200", icon: AlertCircle },
+  pending: {
+    label: "Menunggu Konfirmasi",
+    color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    icon: Clock,
+    description: "Data onboarding Anda sudah kami terima. Tim kami akan segera menghubungi Anda.",
+    eta: "Estimasi review: 1-2 jam kerja",
+  },
+  reviewing: {
+    label: "Sedang Direview",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
+    icon: Loader2Icon,
+    description: "Tim VenteraAI sedang memeriksa data toko & produk Anda dari Shopee.",
+    eta: "Estimasi: 1-2 hari kerja",
+  },
+  in_progress: {
+    label: "Dalam Proses Setup",
+    color: "bg-orange-100 text-orange-700 border-orange-200",
+    icon: Loader2Icon,
+    description: "Engineer kami sedang menyiapkan toko, template, & import produk Anda.",
+    eta: "Estimasi: 2-3 hari kerja",
+  },
+  live: {
+    label: "Toko Aktif",
+    color: "bg-green-100 text-green-700 border-green-200",
+    icon: CheckCircle2,
+    description: "Toko Anda sudah aktif & siap menerima pesanan!",
+    eta: "",
+  },
+  rejected: {
+    label: "Perlu Perbaikan Data",
+    color: "bg-red-100 text-red-700 border-red-200",
+    icon: AlertCircle,
+    description: "Ada data yang perlu diperbaiki. Silakan hubungi tim kami.",
+    eta: "",
+  },
 } as const;
+
+const PROGRESS_STEPS = ["pending", "reviewing", "in_progress", "live"] as const;
+
+function getStepIndex(status: string): number {
+  if (status === "rejected") return 1;
+  const idx = PROGRESS_STEPS.indexOf(status as (typeof PROGRESS_STEPS)[number]);
+  return idx === -1 ? 0 : idx;
+}
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -29,7 +80,7 @@ export default async function DashboardPage() {
   const { data: requests } = client
     ? await supabase
         .from("onboarding_requests")
-        .select("id, status, store_url, plan, template_name, store_id, created_at")
+        .select("id, status, store_url, plan, template_name, store_id, created_at, requested_slug, custom_domain, status_note")
         .eq("client_id", client.id)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -108,26 +159,114 @@ export default async function DashboardPage() {
             const status = (req.status as keyof typeof STATUS_CONFIG) ?? "pending";
             const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
             const Icon = config.icon;
+            const stepIndex = getStepIndex(status);
+            const isRejected = status === "rejected";
+            const displayDomain = req.custom_domain ?? (req.requested_slug ? `${req.requested_slug}.storo.id` : null);
+            const createdDate = new Date(req.created_at).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
+
             return (
               <div
                 key={req.id}
-                className="bg-white border border-gray-100 rounded-xl p-5 flex items-center justify-between shadow-sm"
+                className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <Store className="w-5 h-5 text-primary" />
+                {/* Header */}
+                <div className="p-5 sm:p-6 flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-4 min-w-0 flex-1">
+                    <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Store className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900 capitalize">
+                          Paket {req.plan}
+                        </p>
+                        <span className="text-gray-300">·</span>
+                        <p className="text-sm text-gray-500 capitalize">
+                          Template {req.template_name}
+                        </p>
+                      </div>
+                      {displayDomain && (
+                        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500 min-w-0">
+                          <Globe className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="truncate">{displayDomain}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500">
+                        <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>Dipesan {createdDate}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 capitalize">
-                      Paket {req.plan}
-                    </p>
-                    <p className="text-xs text-gray-500">Template: {req.template_name}</p>
-                  </div>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border flex-shrink-0 ${config.color}`}>
+                    <Icon className={`w-3.5 h-3.5 ${status === "reviewing" || status === "in_progress" ? "animate-spin" : ""}`} />
+                    {config.label}
+                  </span>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border ${config.color}`}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {config.label}
-                </span>
+
+                {/* Progress bar */}
+                {!isRejected && (
+                  <div className="px-5 sm:px-6 pb-4">
+                    <div className="flex items-center gap-1.5">
+                      {PROGRESS_STEPS.map((_, idx) => {
+                        const isDone = idx < stepIndex;
+                        const isActive = idx === stepIndex;
+                        return (
+                          <div
+                            key={idx}
+                            className={`h-1.5 flex-1 rounded-full transition-colors ${
+                              isDone
+                                ? "bg-primary"
+                                : isActive
+                                ? "bg-primary/40"
+                                : "bg-gray-100"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-700">{config.description}</p>
+                        {config.eta && (
+                          <p className="text-xs text-gray-400 mt-0.5">{config.eta}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejected note */}
+                {isRejected && req.status_note && (
+                  <div className="mx-5 sm:mx-6 mb-4 bg-red-50 border border-red-100 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-red-800 mb-0.5">Catatan dari tim:</p>
+                    <p className="text-xs text-red-700">{req.status_note}</p>
+                  </div>
+                )}
+
+                {/* Footer actions */}
+                <div className="border-t border-gray-100 px-5 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap bg-gray-50/50">
+                  <a
+                    href="https://wa.me/6285157406969"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-green-600 transition-colors cursor-pointer"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    Hubungi tim
+                  </a>
+                  <Link
+                    href={`/dashboard/stores/${req.id}`}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                  >
+                    Lihat detail
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
             );
           })}
