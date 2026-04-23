@@ -132,7 +132,6 @@ Deno.serve(async (req: Request) => {
     },
     success_redirect_url,
     failure_redirect_url,
-    payment_methods: ["BANK_TRANSFER", "EWALLET", "QR_CODE", "CREDIT_CARD"],
     locale: "id",
     items: [
       {
