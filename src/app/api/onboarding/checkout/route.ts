@@ -137,16 +137,20 @@ export async function POST(request: NextRequest) {
     }
     const slug = slugify(storeName?.trim() || fullName.trim());
 
-    // ── Create client row ─────────────────────────────────────────
+    // ── Upsert client row (retry-safe: user may already have a client row
+    //    from a previous attempt, or from Google OAuth signup) ──────
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .insert({
-        user_id: userId,
-        full_name: fullName.trim(),
-        phone: phone.trim(),
-        shopee_store_link: shopeeStoreLink?.trim() || null,
-        shopee_store_name: storeName?.trim() || null,
-      })
+      .upsert(
+        {
+          user_id: userId,
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+          shopee_store_link: shopeeStoreLink?.trim() || null,
+          shopee_store_name: storeName?.trim() || null,
+        },
+        { onConflict: "user_id" }
+      )
       .select("id")
       .single();
 
@@ -219,7 +223,7 @@ export async function POST(request: NextRequest) {
     const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-    const edgeFnUrl = `${SUPABASE_URL}/functions/v1/strcr-create-invoice`;
+    const edgeFnUrl = `${SUPABASE_URL}/functions/v1/storo-billing-invoice`;
 
     try {
       const edgeFnRes = await fetch(edgeFnUrl, {

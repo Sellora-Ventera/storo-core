@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import storoLogo from "@/assets/storo-logo.png";
 
 function GoogleIcon() {
@@ -53,7 +53,7 @@ export default function SignInForm() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError(null);
-    const supabase = createClient();
+    const supabase = getSupabaseBrowserClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -70,7 +70,7 @@ export default function SignInForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const supabase = createClient();
+    const supabase = getSupabaseBrowserClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,

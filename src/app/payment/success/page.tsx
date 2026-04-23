@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { CheckCircle2, ArrowRight, Home, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -28,7 +28,7 @@ function SuccessContent() {
 
   useEffect(() => {
     if (!invoiceId) { setLoading(false); return; }
-    const supabase = createClient();
+    const supabase = getSupabaseBrowserClient();
     (async () => {
       const { data } = await supabase.from("invoices").select("*").eq("id", invoiceId).single();
       if (data) setInvoice(data as Invoice);

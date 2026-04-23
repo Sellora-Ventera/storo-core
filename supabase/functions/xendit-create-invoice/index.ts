@@ -81,7 +81,6 @@ serve(async (req) => {
       success_redirect_url: `${APP_URL}/payment/success?invoice_id=${invoice.id}`,
       failure_redirect_url: `${APP_URL}/payment/failed?invoice_id=${invoice.id}`,
       invoice_duration: 86400 * 3, // 3 hari
-      payment_methods: ["BANK_TRANSFER", "EWALLET", "QR_CODE", "CREDIT_CARD"],
       locale: "id",
       items: [
         {

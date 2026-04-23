@@ -9,7 +9,6 @@ import {
   Store,
   Globe,
   Receipt,
-  Package,
   User,
   HelpCircle,
   ChevronLeft,
@@ -24,7 +23,6 @@ import storoLogo from "@/assets/storo-logo.png";
 const navItems = [
   { href: "/dashboard", label: "Beranda", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/stores", label: "Toko Saya", icon: Store },
-  { href: "/dashboard/products", label: "Produk", icon: Package },
   { href: "/dashboard/domains", label: "Domain", icon: Globe },
   { href: "/dashboard/billing", label: "Tagihan", icon: Receipt },
   { href: "/dashboard/referral", label: "Referral", icon: Gift },

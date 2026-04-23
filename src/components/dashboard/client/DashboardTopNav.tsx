@@ -9,7 +9,6 @@ import {
   Store,
   Globe,
   Receipt,
-  Package,
   User,
   HelpCircle,
   LogOut,
@@ -28,7 +27,6 @@ type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean 
 const primaryNav: NavItem[] = [
   { href: "/dashboard", label: "Beranda", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/stores", label: "Toko Saya", icon: Store },
-  { href: "/dashboard/products", label: "Produk", icon: Package },
   { href: "/dashboard/domains", label: "Domain", icon: Globe },
   { href: "/dashboard/billing", label: "Tagihan", icon: Receipt },
 ];

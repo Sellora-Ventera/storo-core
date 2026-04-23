@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Missing XENDIT_API_KEY_${env.toUpperCase()}` }, 500);
   }
 
-  const external_id = `STRCR-${invoice.id}`;
+  const external_id = `STORO-INV-${invoice.id}`;
   const auth = btoa(`${xenditApiKey}:`);
 
   // --- Resolve gateway callback URL ---
@@ -132,7 +132,6 @@ Deno.serve(async (req: Request) => {
     },
     success_redirect_url,
     failure_redirect_url,
-    payment_methods: ["BANK_TRANSFER", "EWALLET", "QR_CODE", "CREDIT_CARD"],
     locale: "id",
     items: [
       {

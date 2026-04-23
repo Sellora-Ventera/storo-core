@@ -178,14 +178,14 @@ export const DUMMY_BANNERS: DummyBanner[] = [
     title: "Koleksi Musim Baru",
     subtitle: "Diskon hingga 30% untuk produk pilihan",
     image_url: PLACEHOLDER_IMG("banner-1"),
-    link_url: "/store/products",
+    link_url: "/products",
     sort_order: 1,
   },
   {
     title: "Free Ongkir Jabodetabek",
     subtitle: "Pembelian minimum Rp 200rb",
     image_url: PLACEHOLDER_IMG("banner-2"),
-    link_url: "/store/products",
+    link_url: "/products",
     sort_order: 2,
   },
 ];

@@ -91,15 +91,13 @@ export default function InvoiceDetailPage() {
       if (url) { window.open(url, "_blank"); return; }
     }
     setPaying(true);
-    const supabase = createClient();
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("xendit-create-invoice", {
-        body: { invoice_id: invoice.id },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (res.error || !res.data?.success) throw new Error(res.data?.error || "Gagal membuat pembayaran");
-      window.open(res.data.xendit_invoice_url, "_blank");
+      const res = await fetch(`/api/billing/${invoice.id}/pay`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.xenditInvoiceUrl) {
+        throw new Error(data.error || "Gagal membuat pembayaran");
+      }
+      window.open(data.xenditInvoiceUrl, "_blank");
       await load();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Terjadi kesalahan");
