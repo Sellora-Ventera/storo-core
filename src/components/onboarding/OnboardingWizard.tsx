@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducer, useRef, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,10 +74,31 @@ type Action =
   | { type: "PREV" }
   | { type: "GOTO"; step: Step };
 
+// Saat user klik Back, field di step tujuan di-reset supaya mereka isi ulang
+// dari nol (sesuai permintaan produk: kembali = start over untuk step itu).
+const STEP_RESET_FIELDS: Record<number, Partial<State>> = {
+  1: { plan: "" },
+  2: { websiteName: "", customDomain: "" },
+  3: {
+    fullName: "",
+    storeName: "",
+    phone: "",
+    shopeeStoreLink: "",
+    shopeeVerified: false,
+    shopeeStoreId: "",
+    shopeeStoreName: "",
+  },
+  4: { authMethod: "", email: "", password: "" },
+  5: { invoiceId: "", xenditInvoiceUrl: "", agreed: false },
+};
+
 function reducer(state: State, action: Action): State {
   if (action.type === "UPDATE") return { ...state, ...action.payload };
   if (action.type === "NEXT") return { ...state, step: Math.min(state.step + 1, 6) as Step };
-  if (action.type === "PREV") return { ...state, step: Math.max(state.step - 1, 1) as Step };
+  if (action.type === "PREV") {
+    const newStep = Math.max(state.step - 1, 1) as Step;
+    return { ...state, ...STEP_RESET_FIELDS[newStep], step: newStep };
+  }
   if (action.type === "GOTO") return { ...state, step: action.step };
   return state;
 }
@@ -107,61 +128,9 @@ const STEP_META = [
   { num: 5, label: "Bayar", icon: ClipboardList },
 ];
 
-// ── Wizard state persistence (localStorage) ──────────────────────────────
-// Pertahankan input wizard kalau user refresh / back-forward / mondar-mandir
-// step. Field sensitif (password, invoice yg di-issue server, success flag)
-// tidak ikut disimpan supaya tidak bocor / stale.
-const WIZARD_STORAGE_KEY = "storo:onboarding:wizard:v1";
-
-type PersistableState = Omit<
-  State,
-  "password" | "invoiceId" | "xenditInvoiceUrl" | "agreed"
->;
-
-function readWizardCache(): Partial<PersistableState> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(WIZARD_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as Partial<PersistableState>;
-  } catch {
-    return null;
-  }
-}
-
-function writeWizardCache(state: State) {
-  if (typeof window === "undefined") return;
-  try {
-    const {
-      password: _password,
-      invoiceId: _invoiceId,
-      xenditInvoiceUrl: _xenditInvoiceUrl,
-      agreed: _agreed,
-      ...persistable
-    } = state;
-    void _password;
-    void _invoiceId;
-    void _xenditInvoiceUrl;
-    void _agreed;
-    window.localStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(persistable));
-  } catch {
-    // quota / private mode — abaikan, persistence murni convenience
-  }
-}
-
-function clearWizardCache() {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(WIZARD_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
-
 // ── Root Wizard ──────────────────────────────────────────────────────────
 export default function OnboardingWizard() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const [state, dispatch] = useReducer(reducer, {
     step: 1,
@@ -192,62 +161,18 @@ export default function OnboardingWizard() {
     agreed: false,
   });
 
-  // Hydrate dari localStorage sekali saat mount — supaya refresh / back-forward
-  // tidak menghapus profil, nama toko, dll. URL params di-restore SETELAH ini
-  // agar override cache (mis. /onboarding?plan=advance dari halaman pricing).
-  const hydratedRef = useRef(false);
+  // Pickup `plan` dari query param sekali saat mount, hanya untuk share link
+  // dari halaman pricing (/onboarding?plan=advance). Tidak ada persistensi
+  // lain — refresh mulai dari step 1 dengan state kosong.
+  const planRestoredRef = useRef(false);
   useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
-    const cached = readWizardCache();
-    if (cached && Object.keys(cached).length > 0) {
-      dispatch({ type: "UPDATE", payload: cached });
-    }
-  }, []);
-
-  // Restore state from query params on mount
-  useEffect(() => {
+    if (planRestoredRef.current) return;
+    planRestoredRef.current = true;
     const planParam = searchParams.get("plan");
-    const stepParam = searchParams.get("step");
-    const websiteParam = searchParams.get("website");
-    const domainParam = searchParams.get("domain");
-
-    const restore: Partial<State> = {};
-    if (planParam && getPlan(planParam)) restore.plan = planParam as PlanId;
-    if (stepParam) {
-      const s = parseInt(stepParam, 10);
-      if (s >= 1 && s <= 5) restore.step = s as Step;
-    }
-    if (websiteParam) restore.websiteName = websiteParam;
-    if (domainParam) restore.customDomain = domainParam;
-
-    if (Object.keys(restore).length > 0) {
-      dispatch({ type: "UPDATE", payload: restore });
+    if (planParam && getPlan(planParam)) {
+      dispatch({ type: "UPDATE", payload: { plan: planParam as PlanId } });
     }
   }, [searchParams]);
-
-  // Persist setiap perubahan state ke localStorage. Bersihkan saat wizard
-  // sukses (step 6) supaya pendaftaran berikutnya mulai dari nol.
-  useEffect(() => {
-    if (state.step === 6) {
-      clearWizardCache();
-    } else {
-      writeWizardCache(state);
-    }
-  }, [state]);
-
-  // Sync state to URL query params
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (state.step > 1) params.set("step", String(state.step));
-    if (state.plan) params.set("plan", state.plan);
-    if (state.websiteName) params.set("website", state.websiteName);
-    if (state.customDomain) params.set("domain", state.customDomain);
-
-    const qs = params.toString();
-    const newUrl = qs ? `/onboarding?${qs}` : "/onboarding";
-    router.replace(newUrl, { scroll: false });
-  }, [state.step, state.plan, state.websiteName, state.customDomain, router]);
 
   // Pick up referral code from sessionStorage
   const [referralCode, setReferralCode] = useState<string | null>(null);
@@ -461,40 +386,6 @@ interface DomainResult {
   available: boolean;
 }
 
-// ── Domain search cache (localStorage) ───────────────────────────────────
-// Hindari refetch Namecheap saat user mondar-mandir antar step. TTL 1 jam
-// cukup untuk satu sesi onboarding tanpa terlalu lama pegang status stale.
-const DOMAIN_CACHE_PREFIX = "storo:onboarding:domain-search:v1:";
-const DOMAIN_CACHE_TTL_MS = 60 * 60 * 1000;
-
-function readDomainCache(query: string): DomainResult[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(DOMAIN_CACHE_PREFIX + query);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { results: DomainResult[]; timestamp: number };
-    if (Date.now() - parsed.timestamp > DOMAIN_CACHE_TTL_MS) {
-      window.localStorage.removeItem(DOMAIN_CACHE_PREFIX + query);
-      return null;
-    }
-    return parsed.results;
-  } catch {
-    return null;
-  }
-}
-
-function writeDomainCache(query: string, results: DomainResult[]) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      DOMAIN_CACHE_PREFIX + query,
-      JSON.stringify({ results, timestamp: Date.now() }),
-    );
-  } catch {
-    // quota / private mode — abaikan, cache murni optimisasi
-  }
-}
-
 // ── Step 2: Domain ───────────────────────────────────────────────────────
 function Step2Domain({
   state,
@@ -518,15 +409,6 @@ function Step2Domain({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
-  // Rehydrate dari cache saat user kembali ke step ini dengan websiteName
-  // sudah terisi — tidak perlu loading lagi kalau hasilnya pernah didapat.
-  useEffect(() => {
-    if (state.websiteName.length >= 3 && !searched) {
-      searchDomains(state.websiteName);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleChange = (value: string) => {
     const slug = slugify(value);
     update({ websiteName: slug, customDomain: "" });
@@ -543,15 +425,6 @@ function Step2Domain({
   };
 
   const searchDomains = async (query: string) => {
-    // Cache hit — tampilkan langsung, tanpa spinner / panggilan API.
-    const cached = readDomainCache(query);
-    if (cached) {
-      setResults(cached);
-      setSearched(true);
-      setSearching(false);
-      return;
-    }
-
     setSearching(true);
     try {
       const res = await fetch(`/api/domains/search?q=${encodeURIComponent(query)}`);
@@ -559,7 +432,6 @@ function Step2Domain({
       const fetched: DomainResult[] = data.results ?? [];
       setResults(fetched);
       setSearched(true);
-      if (fetched.length > 0) writeDomainCache(query, fetched);
     } catch {
       setResults([]);
       setSearched(true);
