@@ -306,7 +306,7 @@ export default async function DashboardPage() {
             <Link href="/dashboard/stores">Lihat Semua Toko</Link>
           </Button>
           <Button asChild variant="outline" className="cursor-pointer">
-            <Link href="/onboarding">+ Tambah Toko Baru</Link>
+            <Link href="/dashboard/stores/new">+ Tambah Toko Baru</Link>
           </Button>
         </div>
       )}

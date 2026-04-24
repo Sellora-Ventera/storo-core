@@ -68,7 +68,7 @@ export default async function StoresPage() {
           <p className="text-gray-500 mt-1">Kelola semua toko online Anda.</p>
         </div>
         <Button asChild className="bg-primary hover:bg-primary/90 text-white cursor-pointer">
-          <Link href="/onboarding">
+          <Link href="/dashboard/stores/new">
             <Plus className="w-4 h-4 mr-2" />
             Tambah Toko Baru
           </Link>
