@@ -128,6 +128,26 @@ const STEP_META = [
   { num: 5, label: "Bayar", icon: ClipboardList },
 ];
 
+// Key lama dari fitur persistence yang sudah dihapus. Dibersihkan sekali di
+// mount pertama supaya browser user yang masih pegang data stale ikut reset.
+const LEGACY_WIZARD_KEY = "storo:onboarding:wizard:v1";
+const LEGACY_DOMAIN_PREFIX = "storo:onboarding:domain-search:v1:";
+
+function purgeLegacyPersistence() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LEGACY_WIZARD_KEY);
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(LEGACY_DOMAIN_PREFIX)) {
+        window.localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    // ignore — quota / private mode
+  }
+}
+
 // ── Root Wizard ──────────────────────────────────────────────────────────
 export default function OnboardingWizard() {
   const searchParams = useSearchParams();
@@ -161,13 +181,15 @@ export default function OnboardingWizard() {
     agreed: false,
   });
 
-  // Pickup `plan` dari query param sekali saat mount, hanya untuk share link
-  // dari halaman pricing (/onboarding?plan=advance). Tidak ada persistensi
-  // lain — refresh mulai dari step 1 dengan state kosong.
-  const planRestoredRef = useRef(false);
+  // Bersihkan sisa persistence lama dari browser user, lalu pickup `plan`
+  // dari query param (hanya untuk share link dari halaman pricing, mis.
+  // /onboarding?plan=advance). Tidak ada write ke storage — refresh selalu
+  // mulai dari step 1 dengan state kosong.
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (planRestoredRef.current) return;
-    planRestoredRef.current = true;
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    purgeLegacyPersistence();
     const planParam = searchParams.get("plan");
     if (planParam && getPlan(planParam)) {
       dispatch({ type: "UPDATE", payload: { plan: planParam as PlanId } });
