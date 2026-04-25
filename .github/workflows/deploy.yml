@@ -64,9 +64,21 @@ jobs:
 
             echo "==> [5/6] Swap artifacts ke production (production tidak diutak-atik sebelum titik ini)"
             cd "$APP_DIR"
+
+            # Backup .env files karena git reset --hard akan menghapusnya
+            # (file dulunya tracked, sekarang gitignored — git lihatnya "dihapus" di commit baru)
+            ENV_BACKUP=$(mktemp -d)
+            [ -f "$APP_DIR/.env" ]       && cp "$APP_DIR/.env"       "$ENV_BACKUP/.env"
+            [ -f "$APP_DIR/.env.local" ] && cp "$APP_DIR/.env.local" "$ENV_BACKUP/.env.local"
+
             git fetch origin "$BRANCH"
             git reset --hard "origin/$BRANCH"
             git clean -fd -e .env -e .env.local -e node_modules -e .next
+
+            # Restore .env kalau git reset menghapusnya
+            [ -f "$ENV_BACKUP/.env" ]       && [ ! -f "$APP_DIR/.env" ]       && cp "$ENV_BACKUP/.env"       "$APP_DIR/.env"
+            [ -f "$ENV_BACKUP/.env.local" ] && [ ! -f "$APP_DIR/.env.local" ] && cp "$ENV_BACKUP/.env.local" "$APP_DIR/.env.local"
+            rm -rf "$ENV_BACKUP"
 
             rm -rf "$APP_DIR/.next.old" "$APP_DIR/node_modules.old"
             [ -d "$APP_DIR/.next" ] && mv "$APP_DIR/.next" "$APP_DIR/.next.old"
