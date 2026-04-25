@@ -12,10 +12,9 @@ export default async function AddStorePage() {
 
   if (!user) redirect("/sign-in");
 
-  // Check that user has a client profile (required by the API)
   const { data: client } = await supabase
     .from("clients")
-    .select("id")
+    .select("full_name, phone")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -37,7 +36,10 @@ export default async function AddStorePage() {
         </p>
       </div>
 
-      <AddStoreWizard />
+      <AddStoreWizard
+        client={{ full_name: client.full_name ?? "", phone: client.phone ?? "" }}
+        userEmail={user.email ?? ""}
+      />
     </div>
   );
 }
