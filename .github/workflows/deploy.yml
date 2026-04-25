@@ -24,6 +24,19 @@ jobs:
           script: |
             set -euo pipefail
 
+            # Source nvm kalau ada (SSH non-interactive tidak load .bashrc otomatis)
+            export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            # Fallback: tambahkan path Node yang umum ke PATH kalau belum ada
+            export PATH="$HOME/.nvm/versions/node/$(ls -1 $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin:/usr/local/bin:/usr/bin:$PATH"
+
+            # Verifikasi node & npm tersedia
+            command -v node >/dev/null || { echo "ERROR: node tidak ditemukan di PATH"; echo "PATH=$PATH"; exit 1; }
+            command -v npm  >/dev/null || { echo "ERROR: npm tidak ditemukan di PATH"; echo "PATH=$PATH"; exit 1; }
+            command -v pm2  >/dev/null || { echo "ERROR: pm2 tidak ditemukan di PATH"; echo "PATH=$PATH"; exit 1; }
+            echo "node: $(node -v) | npm: $(npm -v) | pm2: $(pm2 -v)"
+
             APP_DIR=/var/www/html/storo-id-landingpage
             STAGE_DIR=/var/www/html/storo-id-landingpage-stage
             BRANCH=main
