@@ -1010,10 +1010,30 @@ function Step5Summary({
         xenditInvoiceUrl: data.xenditInvoiceUrl || "",
       });
 
+      // Sign user in client-side so the session cookie persists across the
+      // Xendit redirect — when they come back to /payment/success, they're
+      // already authenticated and can be auto-routed to /dashboard.
+      // Google users already have a session from step 4, so skip.
+      if (state.authMethod !== "google" && state.email && state.password) {
+        try {
+          const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+          const supabase = getSupabaseBrowserClient();
+          await supabase.auth.signInWithPassword({
+            email: state.email,
+            password: state.password,
+          });
+        } catch (signInErr) {
+          // Non-fatal: payment can still proceed; user just won't be auto-logged-in
+          console.warn("[checkout] auto sign-in failed:", signInErr);
+        }
+      }
+
       if (data.xenditInvoiceUrl) {
         window.location.href = data.xenditInvoiceUrl;
       } else {
-        onSuccess();
+        // No Xendit URL (manual payment fallback). User is already signed in
+        // — drop them straight into the dashboard so they can pay from there.
+        window.location.href = "/dashboard";
       }
     } catch {
       setApiError("Gagal menghubungi server. Periksa koneksi Anda.");

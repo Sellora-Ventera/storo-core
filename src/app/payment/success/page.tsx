@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { CheckCircle2, ArrowRight, Home, Loader2 } from "lucide-react";
@@ -22,21 +22,33 @@ interface Invoice {
 
 function SuccessContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const invoiceId = searchParams.get("invoice_id");
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    if (!invoiceId) { setLoading(false); return; }
     const supabase = getSupabaseBrowserClient();
     (async () => {
-      const { data } = await supabase.from("invoices").select("*").eq("id", invoiceId).single();
-      if (data) setInvoice(data as Invoice);
+      const [{ data: invoiceData }, { data: sessionData }] = await Promise.all([
+        invoiceId
+          ? supabase.from("invoices").select("*").eq("id", invoiceId).single()
+          : Promise.resolve({ data: null }),
+        supabase.auth.getSession(),
+      ]);
+      if (invoiceData) setInvoice(invoiceData as Invoice);
+      const isAuthed = Boolean(sessionData?.session?.user);
+      setAuthed(isAuthed);
+      if (isAuthed) {
+        router.replace("/dashboard");
+        return;
+      }
       setLoading(false);
     })();
-  }, [invoiceId]);
+  }, [invoiceId, router]);
 
-  if (loading) {
+  if (loading || authed) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 size={32} className="animate-spin text-muted-foreground" />
@@ -93,18 +105,18 @@ function SuccessContent() {
         </div>
 
         <div className="flex flex-col gap-2">
+          <Link href="/sign-in">
+            <Button className="w-full btn-hero gap-2">
+              <Home size={16} /> Login ke Dashboard <ArrowRight size={16} />
+            </Button>
+          </Link>
           {invoice && (
             <Link href={`/dashboard/billing/${invoice.id}`}>
-              <Button className="w-full btn-hero gap-2">
-                Lihat Invoice <ArrowRight size={16} />
+              <Button variant="outline" className="w-full gap-2">
+                Lihat Invoice
               </Button>
             </Link>
           )}
-          <Link href="/dashboard">
-            <Button variant="outline" className="w-full gap-2">
-              <Home size={16} /> Ke Dashboard
-            </Button>
-          </Link>
         </div>
       </div>
     </div>
