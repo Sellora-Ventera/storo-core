@@ -14,6 +14,7 @@ import {
   Calendar,
   LayoutTemplate,
 } from "lucide-react";
+import { StoreEditDialog } from "@/components/dashboard/StoreEditDialog";
 
 const STATUS_CONFIG = {
   pending: { label: "Menunggu Konfirmasi", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock, spin: false },
@@ -54,7 +55,7 @@ export default async function StoresPage() {
   const { data: stores } = client
     ? await supabase
         .from("onboarding_requests")
-        .select("id, status, store_url, plan, template_name, created_at, requested_slug, custom_domain")
+        .select("id, status, store_url, plan, template_name, created_at, requested_slug, custom_domain, store_name")
         .eq("client_id", client.id)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -109,7 +110,7 @@ export default async function StoresPage() {
                 store.custom_domain ??
                 (store.requested_slug ? `${store.requested_slug}.storo.id` : null);
               const primaryUrl = store.store_url ?? (displayDomain ? `https://${displayDomain}` : null);
-              const storeName = store.requested_slug ?? displayDomain ?? "Toko";
+              const storeName = store.store_name ?? store.requested_slug ?? displayDomain ?? "Toko";
 
               return (
                 <Link
@@ -131,6 +132,11 @@ export default async function StoresPage() {
                           <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${planCfg.color}`}>
                             {planCfg.label}
                           </span>
+                          <StoreEditDialog
+                            storeId={store.id}
+                            currentName={store.store_name ?? store.requested_slug ?? null}
+                            currentDomain={store.custom_domain ?? null}
+                          />
                         </div>
                         {displayDomain && (
                           <div className="flex items-center gap-1.5 text-xs text-gray-500 min-w-0">
