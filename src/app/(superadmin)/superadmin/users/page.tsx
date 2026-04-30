@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 
 const formatDate = (dateStr: string) =>
@@ -10,12 +13,16 @@ const formatDate = (dateStr: string) =>
   });
 
 export default async function AllUsersPage() {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
+
+  // Service client supaya bypass RLS dan menampilkan SEMUA klien.
+  const supabase = await createSupabaseServiceClient();
+
   const { data: clients } = await supabase
     .from("clients")
     .select("id, full_name, phone, referral_code, user_id, created_at")

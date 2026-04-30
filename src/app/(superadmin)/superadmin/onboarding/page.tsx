@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 
 const STATUS_CONFIG = {
@@ -24,14 +27,17 @@ export default async function OnboardingQueuePage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
   const params = await searchParams;
   const activeFilter = params.status || "all";
+
+  // Service client supaya bypass RLS dan menampilkan SEMUA permintaan onboarding.
+  const supabase = await createSupabaseServiceClient();
 
   const { data: requests } = await supabase
     .from("onboarding_requests")

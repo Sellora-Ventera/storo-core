@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -22,12 +25,16 @@ const formatCurrency = (amount: number | null) => {
 };
 
 export default async function DisbursementsPage() {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
+
+  // Service client supaya bypass RLS dan menampilkan SEMUA disbursement.
+  const supabase = await createSupabaseServiceClient();
+
   const { data: disbursements } = await supabase
     .from("disbursements")
     .select("id, store_id, period_label, gross_amount, pg_fee, ops_fee, net_amount, status, paid_at, created_at, onboarding_requests(store_url)")

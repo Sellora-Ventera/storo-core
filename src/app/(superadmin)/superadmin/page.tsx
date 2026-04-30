@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   Users,
@@ -35,12 +38,17 @@ const formatDate = (dateStr: string) =>
   });
 
 export default async function SuperadminOverviewPage() {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
+
+  // Layout sudah memvalidasi superadmin; pakai service client supaya bypass RLS
+  // dan KPI menghitung seluruh data platform, bukan hanya milik user yang login.
+  const supabase = await createSupabaseServiceClient();
+
   // KPI: Total clients
   const { count: totalClients } = await supabase
     .from("clients")

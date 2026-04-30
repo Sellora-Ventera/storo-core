@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 
 const STATUS_CONFIG = {
@@ -20,12 +23,16 @@ const formatDate = (dateStr: string) =>
   });
 
 export default async function AllStoresPage() {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
+
+  // Layout sudah memvalidasi superadmin via service role; pakai service client
+  // di sini supaya bypass RLS dan menampilkan SEMUA toko, bukan hanya milik user.
+  const supabase = await createSupabaseServiceClient();
   const { data: stores } = await supabase
     .from("onboarding_requests")
     .select("id, status, plan, template_name, store_url, created_at, clients(full_name, user_id)")

@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
@@ -20,12 +23,16 @@ const formatCurrency = (amount: number) =>
   }).format(amount);
 
 export default async function BillingPage() {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
+
+  // Service client supaya bypass RLS dan menampilkan SEMUA invoice klien.
+  const supabase = await createSupabaseServiceClient();
+
   const { data: invoices } = await supabase
     .from("invoices")
     .select("id, amount, status, description, due_date, paid_at, created_at, clients(full_name)")

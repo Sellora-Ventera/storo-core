@@ -1,5 +1,8 @@
 import { redirect, notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -32,13 +35,17 @@ export default async function UserDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
   const { id } = await params;
+
+  // Service client supaya superadmin bisa lihat detail klien manapun, bukan hanya
+  // miliknya sendiri.
+  const supabase = await createSupabaseServiceClient();
 
   const { data: client } = await supabase
     .from("clients")

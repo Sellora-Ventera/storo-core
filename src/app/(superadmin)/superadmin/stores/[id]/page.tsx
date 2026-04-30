@@ -1,5 +1,8 @@
 import { redirect, notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -108,13 +111,17 @@ export default async function StoreDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const authClient = await createSupabaseServerClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
   const { id } = await params;
+
+  // Service client supaya superadmin bisa lihat detail toko manapun (RLS
+  // membatasi onboarding_requests/invoices/products/orders ke owner saja).
+  const supabase = await createSupabaseServiceClient();
 
   const { data: store } = await supabase
     .from("onboarding_requests")
