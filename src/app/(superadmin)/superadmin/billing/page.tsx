@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase/server";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import BillingFilters from "@/components/superadmin/BillingFilters";
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return "-";
@@ -22,13 +23,30 @@ const formatCurrency = (amount: number) =>
     minimumFractionDigits: 0,
   }).format(amount);
 
-export default async function BillingPage() {
+const PAGE_SIZE_OPTIONS = [10, 15, 20, 30] as const;
+const DEFAULT_PAGE_SIZE = 10;
+
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; page?: string; pageSize?: string; q?: string }>;
+}) {
   const authClient = await createSupabaseServerClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();
 
   if (!user) redirect("/sign-in");
+
+  const params = await searchParams;
+  const activeFilter = params.status || "all";
+
+  const requestedPageSize = parseInt(params.pageSize ?? "", 10);
+  const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(requestedPageSize)
+    ? requestedPageSize
+    : DEFAULT_PAGE_SIZE;
+  const requestedPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const searchQuery = (params.q ?? "").trim();
 
   // Service client supaya bypass RLS dan menampilkan SEMUA invoice klien.
   const supabase = await createSupabaseServiceClient();
@@ -40,7 +58,7 @@ export default async function BillingPage() {
 
   const all = invoices ?? [];
 
-  // Summary stats
+  // Summary stats — dihitung dari SEMUA data, bukan dari hasil filter.
   const pendingTotal = all
     .filter((inv) => inv.status === "pending")
     .reduce((sum, inv) => sum + (inv.amount || 0), 0);
@@ -79,6 +97,53 @@ export default async function BillingPage() {
     },
   ];
 
+  // Count per status untuk badge tab.
+  const counts = {
+    all: all.length,
+    paid: all.filter((inv) => inv.status === "paid").length,
+    pending: all.filter((inv) => inv.status === "pending").length,
+    overdue: all.filter((inv) => inv.status === "overdue").length,
+  };
+
+  const filtered = all.filter((inv) => {
+    if (activeFilter !== "all" && inv.status !== activeFilter) return false;
+    if (!searchQuery) return true;
+    const needle = searchQuery.toLowerCase();
+    const clientName =
+      (inv.clients as { full_name?: string } | null)?.full_name ?? "";
+    return (
+      clientName.toLowerCase().includes(needle) ||
+      (inv.description ?? "").toLowerCase().includes(needle)
+    );
+  });
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const offset = (currentPage - 1) * pageSize;
+  const paginated = filtered.slice(offset, offset + pageSize);
+
+  const buildHref = (next: { status?: string; page?: number; pageSize?: number; q?: string }) => {
+    const sp = new URLSearchParams();
+    const status = next.status ?? activeFilter;
+    if (status && status !== "all") sp.set("status", status);
+    const ps = next.pageSize ?? pageSize;
+    if (ps !== DEFAULT_PAGE_SIZE) sp.set("pageSize", String(ps));
+    const p = next.page ?? currentPage;
+    if (p !== 1) sp.set("page", String(p));
+    const q = next.q ?? searchQuery;
+    if (q) sp.set("q", q);
+    const qs = sp.toString();
+    return qs ? `/superadmin/billing?${qs}` : "/superadmin/billing";
+  };
+
+  const tabs: { key: string; label: string; count: number }[] = [
+    { key: "all", label: "Semua", count: counts.all },
+    { key: "pending", label: "Pending", count: counts.pending },
+    { key: "paid", label: "Lunas", count: counts.paid },
+    { key: "overdue", label: "Jatuh Tempo", count: counts.overdue },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
@@ -99,6 +164,42 @@ export default async function BillingPage() {
             <p className="text-xl font-bold text-foreground">{value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Filters: status tabs + search + page size */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 bg-background border border-border rounded-xl p-1 w-fit">
+          {tabs.map((tab) => (
+            <Link
+              key={tab.key}
+              href={buildHref({ status: tab.key, page: 1 })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                activeFilter === tab.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground/60 hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full font-mono ${
+                  activeFilter === tab.key
+                    ? "bg-primary/80 text-primary-foreground"
+                    : "bg-muted text-foreground/60"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        <BillingFilters
+          q={searchQuery}
+          status={activeFilter}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          defaultPageSize={DEFAULT_PAGE_SIZE}
+        />
       </div>
 
       {/* Invoices Table */}
@@ -131,13 +232,15 @@ export default async function BillingPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {all.length > 0 ? (
-                all.map((inv, idx) => {
+              {paginated.length > 0 ? (
+                paginated.map((inv, idx) => {
                   const clientName =
                     (inv.clients as { full_name?: string } | null)?.full_name ?? "-";
                   return (
                     <tr key={inv.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="py-3 px-4 text-foreground/40 text-xs">{idx + 1}</td>
+                      <td className="py-3 px-4 text-foreground/40 text-xs">
+                        {offset + idx + 1}
+                      </td>
                       <td className="py-3 px-4 font-medium text-foreground">{clientName}</td>
                       <td className="py-3 px-4 text-foreground/70">{inv.description ?? "-"}</td>
                       <td className="py-3 px-4 text-foreground font-mono text-xs">
@@ -172,7 +275,9 @@ export default async function BillingPage() {
               ) : (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-foreground/40 text-sm">
-                    Belum ada invoice
+                    {searchQuery || activeFilter !== "all"
+                      ? "Tidak ada data untuk filter ini"
+                      : "Belum ada invoice"}
                   </td>
                 </tr>
               )}
@@ -180,6 +285,61 @@ export default async function BillingPage() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Footer */}
+      {totalItems > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p className="text-foreground/60 text-xs">
+            Menampilkan{" "}
+            <span className="font-medium text-foreground">
+              {offset + 1}–{Math.min(offset + pageSize, totalItems)}
+            </span>{" "}
+            dari <span className="font-medium text-foreground">{totalItems}</span> data
+          </p>
+
+          <div className="flex items-center gap-1">
+            {currentPage > 1 ? (
+              <Link
+                href={buildHref({ page: currentPage - 1 })}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+              >
+                Prev
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-foreground/30 cursor-not-allowed">
+                Prev
+              </span>
+            )}
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <Link
+                key={p}
+                href={buildHref({ page: p })}
+                className={`min-w-[2rem] text-center px-2 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  p === currentPage
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border text-foreground/70 hover:bg-muted/50"
+                }`}
+              >
+                {p}
+              </Link>
+            ))}
+
+            {currentPage < totalPages ? (
+              <Link
+                href={buildHref({ page: currentPage + 1 })}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-foreground/30 cursor-not-allowed">
+                Next
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

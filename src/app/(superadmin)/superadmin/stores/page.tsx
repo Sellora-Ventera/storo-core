@@ -5,16 +5,6 @@ import {
 } from "@/lib/supabase/server";
 import Link from "next/link";
 
-const STATUS_CONFIG = {
-  pending: { label: "Pending", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-  reviewing: { label: "Reviewing", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  in_progress: { label: "In Progress", color: "bg-orange-100 text-orange-700 border-orange-200" },
-  live: { label: "Live", color: "bg-green-100 text-green-700 border-green-200" },
-  rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200" },
-} as const;
-
-type StatusKey = keyof typeof STATUS_CONFIG;
-
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString("id-ID", {
     day: "numeric",
@@ -31,12 +21,62 @@ export default async function AllStoresPage() {
   if (!user) redirect("/sign-in");
 
   // Layout sudah memvalidasi superadmin via service role; pakai service client
-  // di sini supaya bypass RLS dan menampilkan SEMUA toko, bukan hanya milik user.
+  // di sini supaya bypass RLS dan menampilkan SEMUA toko.
   const supabase = await createSupabaseServiceClient();
+
+  // Source utama: tabel `stores` (storoengine schema, DB sama). Ini list toko
+  // yang sudah live/deployed, bukan request onboarding.
   const { data: stores } = await supabase
-    .from("onboarding_requests")
-    .select("id, status, plan, template_name, store_url, created_at, clients(full_name, user_id)")
+    .from("stores")
+    .select("id, name, slug, owner_id, is_active, created_at")
     .order("created_at", { ascending: false });
+
+  const storeRows = stores ?? [];
+
+  // Enrichment 1: lookup clients via owner_id → clients.user_id (TEXT auth uid).
+  const ownerIds = Array.from(
+    new Set(
+      storeRows
+        .map((s) => s.owner_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const { data: clientRows } = ownerIds.length
+    ? await supabase
+        .from("clients")
+        .select("id, full_name, user_id")
+        .in("user_id", ownerIds)
+    : { data: [] as Array<{ id: string; full_name: string | null; user_id: string }> };
+
+  const clientByOwner = new Map<string, { id: string; full_name: string | null }>();
+  for (const c of clientRows ?? []) {
+    if (c.user_id) clientByOwner.set(c.user_id, { id: c.id, full_name: c.full_name });
+  }
+
+  // Enrichment 2: ambil onboarding_request terbaru per client untuk plan +
+  // template + custom_domain (info yang tidak ada di tabel stores).
+  const clientIds = Array.from(new Set(Array.from(clientByOwner.values()).map((c) => c.id)));
+  const { data: requestRows } = clientIds.length
+    ? await supabase
+        .from("onboarding_requests")
+        .select("client_id, plan, template_name, custom_domain, created_at")
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false })
+    : { data: [] as Array<{ client_id: string; plan: string; template_name: string | null; custom_domain: string | null; created_at: string }> };
+
+  const requestByClient = new Map<
+    string,
+    { plan: string; template_name: string | null; custom_domain: string | null }
+  >();
+  for (const r of requestRows ?? []) {
+    if (r.client_id && !requestByClient.has(r.client_id)) {
+      requestByClient.set(r.client_id, {
+        plan: r.plan,
+        template_name: r.template_name,
+        custom_domain: r.custom_domain,
+      });
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -57,10 +97,10 @@ export default async function AllStoresPage() {
                   No
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-foreground/60 text-xs uppercase">
-                  Klien
+                  Nama Toko
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-foreground/60 text-xs uppercase">
-                  Email / User ID
+                  Klien
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-foreground/60 text-xs uppercase">
                   Paket
@@ -75,9 +115,6 @@ export default async function AllStoresPage() {
                   Status
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-foreground/60 text-xs uppercase">
-                  Engine
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-foreground/60 text-xs uppercase">
                   Tanggal
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-foreground/60 text-xs uppercase">
@@ -86,36 +123,38 @@ export default async function AllStoresPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {stores && stores.length > 0 ? (
-                stores.map((store, idx) => {
-                  const status = (store.status as StatusKey) ?? "pending";
-                  const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
-                  const client = store.clients as {
-                    full_name?: string;
-                    user_id?: string;
-                  } | null;
+              {storeRows.length > 0 ? (
+                storeRows.map((store, idx) => {
+                  const client = store.owner_id ? clientByOwner.get(store.owner_id) : null;
+                  const req = client ? requestByClient.get(client.id) : null;
+                  const domain = req?.custom_domain || `${store.slug}.storo.id`;
                   return (
                     <tr key={store.id} className="hover:bg-muted/50">
                       <td className="py-3 px-4 text-foreground/40 text-xs">{idx + 1}</td>
-                      <td className="py-3 px-4 font-medium text-foreground">
+                      <td className="py-3 px-4 font-medium text-foreground">{store.name}</td>
+                      <td className="py-3 px-4 text-foreground/70">
                         {client?.full_name ?? "-"}
                       </td>
-                      <td className="py-3 px-4 text-foreground/60 font-mono text-xs truncate max-w-[120px]">
-                        {client?.user_id ?? "-"}
+                      <td className="py-3 px-4 capitalize text-foreground/60">
+                        {req?.plan ?? "-"}
                       </td>
-                      <td className="py-3 px-4 capitalize text-foreground/60">{store.plan}</td>
-                      <td className="py-3 px-4 text-foreground/60">{store.template_name ?? "-"}</td>
-                      <td className="py-3 px-4 text-foreground/60 text-xs font-mono truncate max-w-[140px]">
-                        {store.store_url ?? "-"}
+                      <td className="py-3 px-4 text-foreground/60">
+                        {req?.template_name ?? "-"}
+                      </td>
+                      <td className="py-3 px-4 text-foreground/60 text-xs font-mono truncate max-w-[200px]">
+                        {domain}
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-flex text-xs font-medium px-2 py-1 rounded-full border ${config.color}`}
+                          className={`inline-flex text-xs font-medium px-2 py-1 rounded-full border ${
+                            store.is_active
+                              ? "bg-green-100 text-green-700 border-green-200"
+                              : "bg-gray-100 text-gray-600 border-gray-200"
+                          }`}
                         >
-                          {config.label}
+                          {store.is_active ? "Aktif" : "Nonaktif"}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-foreground/40 text-xs font-mono">1.0.0</td>
                       <td className="py-3 px-4 text-foreground/60 text-xs">
                         {formatDate(store.created_at)}
                       </td>
@@ -132,7 +171,7 @@ export default async function AllStoresPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={10} className="py-10 text-center text-foreground/40 text-sm">
+                  <td colSpan={9} className="py-10 text-center text-foreground/40 text-sm">
                     Belum ada store
                   </td>
                 </tr>
