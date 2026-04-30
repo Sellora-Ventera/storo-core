@@ -55,7 +55,7 @@ export function StoreEditDialog({ storeId, currentName, currentDomain }: Props) 
         return;
       }
       setOpen(false);
-      router.refresh();
+      router.push("/dashboard/stores");
     } catch {
       setError("Terjadi kesalahan. Coba lagi.");
     } finally {
@@ -65,16 +65,22 @@ export function StoreEditDialog({ storeId, currentName, currentDomain }: Props) 
 
   return (
     <>
+      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
       <button
+        type="button"
         onClick={handleOpen}
         className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors"
         title="Edit nama & domain"
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Edit Toko</DialogTitle>
           </DialogHeader>
