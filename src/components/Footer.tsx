@@ -22,6 +22,7 @@ const legalLinks = [
 ];
 
 export default function Footer() {
+  const year = new Date().getFullYear();
   return (
     <footer className="bg-gray-50 border-t border-gray-100 font-inter">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
@@ -150,7 +151,7 @@ export default function Footer() {
         {/* Divider */}
         <div className="border-t border-gray-200 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-gray-400 text-xs text-center sm:text-left">
-            © 2025 Storo.id — PT Ventera Inovasi Digital. All rights reserved.
+            © {year} Storo.id — PT Ventera Inovasi Digital. All rights reserved.
           </p>
           <p className="text-gray-400 text-xs">
             Powered by{" "}

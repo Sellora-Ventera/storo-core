@@ -390,7 +390,7 @@ function Step1Plan({
           size="lg"
           className="btn-hero px-12"
         >
-          Lanjut Isi Profil
+          Lanjut Pilih Domain
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
@@ -471,10 +471,7 @@ function Step2Domain({
       setError("Hanya huruf kecil, angka, dan tanda hubung (-)");
       return;
     }
-    if (!state.customDomain) {
-      setError("Pilih salah satu domain terlebih dahulu");
-      return;
-    }
+    // Custom domain opsional — subdomain gratis .storo.id selalu cukup
     setError("");
     onNext();
   };
@@ -578,7 +575,7 @@ function Step2Domain({
         </Button>
         <Button
           onClick={handleNext}
-          disabled={!state.customDomain}
+          disabled={!state.websiteName.trim()}
           className="flex-1 bg-primary text-white hover:bg-primary/90 h-11 text-sm font-semibold cursor-pointer disabled:opacity-50"
         >
           Lanjut Isi Profil
@@ -1053,7 +1050,13 @@ function Step5Summary({
       <div className="bg-gray-50 rounded-xl p-5 space-y-3">
         <SummaryRow label="Nama" value={state.fullName} />
         <SummaryRow label="Nama Toko" value={state.storeName} />
-        <SummaryRow label="Website" value={state.customDomain || `${state.websiteName}.storo.id`} />
+        <SummaryRow
+          label="Website"
+          value={`${state.websiteName}.storo.id`}
+        />
+        {state.customDomain && (
+          <SummaryRow label="Custom Domain" value={state.customDomain} />
+        )}
         <SummaryRow label="WhatsApp" value={state.phone} />
         <SummaryRow label="Email" value={state.email} />
         {state.shopeeStoreLink && <SummaryRow label="Shopee" value={state.shopeeStoreLink} />}
@@ -1070,6 +1073,12 @@ function Step5Summary({
               <span className="text-xs text-gray-400">Biaya bulanan</span>
               <span className="text-xs text-gray-500">{formatIDR(plan.monthly!)}/bln</span>
             </div>
+            {state.customDomain && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Domain {state.customDomain}</span>
+                <span className="text-sm font-semibold text-green-600">Gratis</span>
+              </div>
+            )}
           </>
         )}
 
@@ -1126,9 +1135,9 @@ function Step5Summary({
 
       <p className="text-center text-xs text-gray-400 mt-4">
         Dengan melanjutkan, Anda menyetujui{" "}
-        <a href="/syarat-ketentuan" target="_blank" className="text-primary hover:underline">S&K</a>{" "}
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">S&K</a>{" "}
         dan{" "}
-        <a href="/kebijakan-privasi" target="_blank" className="text-primary hover:underline">Kebijakan Privasi</a>{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Kebijakan Privasi</a>{" "}
         Storo.id
       </p>
     </div>

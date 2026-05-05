@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { Bot, X, Send, Headphones } from "lucide-react";
@@ -10,7 +10,7 @@ interface Message {
 
 const CHAT_API = "https://unpqekghcpjclzvpeyse.supabase.co/functions/v1/chat-storo";
 const WELCOME_MESSAGE = "Halo! Saya Storo Assistant, asisten virtual resmi Storo Engine. Ada yang bisa saya bantu seputar platform webstore kami?";
-const WA_URL = "https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20tentang%20webstore";
+const WA_URL = "https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20tentang%20webstore";
 
 const WhatsAppIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">

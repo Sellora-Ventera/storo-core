@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,7 +65,7 @@ const LeadCapturePopup = () => {
       const message = `Halo Storo.id! Saya tertarik untuk membuat webstore.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
       
       // Open WhatsApp
-      window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
+      window.open(`https://wa.me/6285157406969?text=${message}`, '_blank');
       
       // Track Google Ads conversion
       trackConversion();
@@ -93,7 +93,7 @@ const LeadCapturePopup = () => {
         localStorage.setItem("storo-lead-capture-seen", "true");
         
         const message = `Halo Storo.id! Saya tertarik untuk membuat webstore.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
-        window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
+        window.open(`https://wa.me/6285157406969?text=${message}`, '_blank');
         
         // Track Google Ads conversion
         trackConversion();
@@ -137,11 +137,11 @@ const LeadCapturePopup = () => {
         
         <DialogHeader className="text-center">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Bikin Website Toko Online dalam Hitungan Menit 🚀
+            Bikin Website Toko Online dalam Hitungan Menit
           </DialogTitle>
-          <p className="text-muted-foreground mt-2">
+          <DialogDescription className="text-muted-foreground mt-2">
             Cukup 1 klik, produk Shopee kamu otomatis pindah ke website. Nggak perlu coding, nggak perlu ribet.
-          </p>
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">

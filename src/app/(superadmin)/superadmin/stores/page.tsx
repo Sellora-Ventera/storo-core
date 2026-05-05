@@ -28,16 +28,16 @@ export default async function AllStoresPage() {
   // yang sudah live/deployed, bukan request onboarding.
   const { data: stores } = await supabase
     .from("stores")
-    .select("id, name, slug, owner_id, is_active, created_at")
+    .select("id, name, slug, user_id, is_active, created_at")
     .order("created_at", { ascending: false });
 
   const storeRows = stores ?? [];
 
-  // Enrichment 1: lookup clients via owner_id → clients.user_id (TEXT auth uid).
+  // Enrichment 1: lookup clients via stores.user_id → clients.user_id (auth uid).
   const ownerIds = Array.from(
     new Set(
       storeRows
-        .map((s) => s.owner_id)
+        .map((s) => s.user_id)
         .filter((id): id is string => Boolean(id))
     )
   );
@@ -125,7 +125,7 @@ export default async function AllStoresPage() {
             <tbody className="divide-y divide-border">
               {storeRows.length > 0 ? (
                 storeRows.map((store, idx) => {
-                  const client = store.owner_id ? clientByOwner.get(store.owner_id) : null;
+                  const client = store.user_id ? clientByOwner.get(store.user_id) : null;
                   const req = client ? requestByClient.get(client.id) : null;
                   const domain = req?.custom_domain || `${store.slug}.storo.id`;
                   return (

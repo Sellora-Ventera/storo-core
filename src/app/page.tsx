@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Problem from "@/components/Problem";
@@ -8,6 +8,7 @@ import Pricing from "@/components/Pricing";
 import FAQ from "@/components/FAQ";
 import ClosingCTA from "@/components/ClosingCTA";
 import ContactForm from "@/components/ContactForm";
+import Footer from "@/components/Footer";
 import FloatingChatbot from "@/components/FloatingChatbot";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import LeadCapturePopup from "@/components/LeadCapturePopup";
@@ -34,7 +35,7 @@ const organizationJsonLd = {
     "Jasa pembuatan webstore terkelola untuk seller Shopee Indonesia. Domain custom, payment gateway, ongkir real-time.",
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+6285148416700",
+    telephone: "+6285157406969",
     contactType: "customer service",
     availableLanguage: "Indonesian",
   },
@@ -119,6 +120,7 @@ export default function HomePage() {
         <ContactForm />
         <ClosingCTA />
       </main>
+      <Footer />
       <FloatingChatbot />
       <WhatsAppFloat />
       <LeadCapturePopup />

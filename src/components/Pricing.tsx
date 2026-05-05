@@ -3,85 +3,18 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { PLANS, formatIDR } from "@/lib/plans";
 import DownloadCatalog from "./DownloadCatalog";
 
-const Pricing = () => {
-  const packages = [
-    {
-      name: "Starter",
-      price: "Rp1,5 juta",
-      description: "Untuk bisnis yang baru mulai",
-      features: [
-        "Setup webstore + 100 SKU",
-        "Integrasi payment & ongkir",
-        "WooCommerce untuk order processing",
-        "Free support 1 bulan",
-        "Training penggunaan dasar",
-        "Maintenance & hosting: Rp200rb/bulan",
-      ],
-      popular: false,
-    },
-    {
-      name: "Pro",
-      price: "Rp2,5 juta",
-      description: "Paling populer untuk seller aktif",
-      features: [
-        "Setup webstore + 200 SKU",
-        "AI rewrite judul & deskripsi produk",
-        "WooCommerce untuk order processing",
-        "Free domain 1 tahun",
-        "Template custom design",
-        "Priority support",
-        "Maintenance & hosting: Rp200rb/bulan",
-      ],
-      popular: true,
-    },
-    {
-      name: "Advance",
-      price: "Rp3,5 juta",
-      description: "Untuk seller dengan volume tinggi",
-      features: [
-        "Setup webstore + 1000 SKU",
-        "AI rewrite judul & deskripsi produk",
-        "WooCommerce untuk order processing",
-        "Free domain 1 tahun",
-        "Template custom design",
-        "Priority support",
-        "Maintenance & hosting: Rp200rb/bulan",
-      ],
-      popular: false,
-    },
-    {
-      name: "Flexible",
-      price: "Rp5 juta",
-      description: "Domain & hosting customer sendiri",
-      features: [
-        "Setup di hosting customer",
-        "Domain customer sendiri",
-        "WooCommerce untuk order processing",
-        "Template custom design",
-        "Priority support",
-        "Tanpa biaya maintenance",
-        "Lifetime use",
-      ],
-      popular: false,
-    },
-    {
-      name: "Custom",
-      price: "Custom Price",
-      description: "Solusi khusus sesuai kebutuhan",
-      features: [
-        "SKU unlimited",
-        "Tema custom + integrasi iklan",
-        "WooCommerce dengan custom features",
-        "SLA support cepat (2 jam)",
-        "Marketing automation",
-        "Dedicated account manager",
-      ],
-      popular: false,
-    },
-  ];
+const planDescriptions: Record<string, string> = {
+  starter: "Untuk bisnis yang baru mulai",
+  pro: "Paling populer untuk seller aktif",
+  advance: "Untuk seller dengan volume tinggi",
+  flexible: "Domain & hosting customer sendiri",
+  custom: "Solusi khusus sesuai kebutuhan",
+};
 
+const Pricing = () => {
   return (
     <section id="pricing" className="section-padding bg-gray-50">
       <div className="container mx-auto px-6">
@@ -95,44 +28,73 @@ const Pricing = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8 max-w-7xl mx-auto pt-6">
-          {packages.map((pkg, index) => (
-            <div
-              key={index}
-              className={`relative bg-white rounded-xl shadow-lg p-8 ${pkg.popular ? "ring-2 ring-primary" : ""}`}
-            >
-              {pkg.popular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                  <span className="bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
-                    Paling Populer
-                  </span>
-                </div>
-              )}
-
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h3>
-                <div className="text-3xl font-bold text-primary mb-2">{pkg.price}</div>
-                <p className="text-gray-600">{pkg.description}</p>
-              </div>
-
-              <div className="space-y-4 mb-8">
-                {pkg.features.map((feature, featureIndex) => (
-                  <div key={featureIndex} className="flex items-start space-x-3">
-                    <Check className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                asChild
-                className={`w-full cursor-pointer ${pkg.popular ? "btn-hero" : "btn-outline"}`}
+          {PLANS.map((pkg) => {
+            const priceLabel =
+              pkg.setup !== null ? formatIDR(pkg.setup) : "Custom Price";
+            const monthlyLabel =
+              pkg.monthly !== null
+                ? `Maintenance & hosting: ${formatIDR(pkg.monthly)}/bulan`
+                : null;
+            const features = monthlyLabel
+              ? [...pkg.features, monthlyLabel]
+              : pkg.features;
+            return (
+              <div
+                key={pkg.id}
+                className={`relative bg-white rounded-xl shadow-lg p-8 ${
+                  pkg.popular ? "ring-2 ring-primary" : ""
+                }`}
               >
-                <Link href={`/onboarding?plan=${pkg.name.toLowerCase()}`}>
-                  Pilih Paket {pkg.name}
-                </Link>
-              </Button>
-            </div>
-          ))}
+                {pkg.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                    <span className="bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
+                      Paling Populer
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    {pkg.name}
+                  </h3>
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    {priceLabel}
+                  </div>
+                  <p className="text-gray-600">
+                    {planDescriptions[pkg.id] ?? ""}
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-8">
+                  {features.map((feature) => (
+                    <div key={feature} className="flex items-start space-x-3">
+                      <Check className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-700">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  asChild
+                  className={`w-full cursor-pointer ${
+                    pkg.popular ? "btn-hero" : "btn-outline"
+                  }`}
+                >
+                  <Link
+                    href={
+                      pkg.enterprise
+                        ? "https://wa.me/6285157406969"
+                        : `/onboarding?plan=${pkg.id}`
+                    }
+                  >
+                    {pkg.enterprise
+                      ? "Hubungi Kami"
+                      : `Pilih Paket ${pkg.name}`}
+                  </Link>
+                </Button>
+              </div>
+            );
+          })}
         </div>
 
         <div className="text-center mt-12">

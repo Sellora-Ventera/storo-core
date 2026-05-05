@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import FloatingChatbot from "@/components/FloatingChatbot";
 import { supabase } from "@/integrations/supabase/client";
 import brandingStrategyImg from "@/assets/blog-branding-strategy.jpg";
@@ -902,29 +903,20 @@ const Blog = () => {
   // Separate useEffect for data fetching (no cleanup needed)
   useEffect(() => {
     let isMounted = true;
-    
+
     const fetchPosts = async () => {
-      console.log('🔄 Fetching blog posts from database...');
       setLoading(true);
       setError(null);
-      
+
       try {
         const { data, error } = await supabase
           .from('storo_blog_posts' as any)
           .select('*')
           .order('published_at', { ascending: false }) as any;
 
-        console.log('📊 Supabase response:', { data, error });
+        if (!isMounted) return;
 
-        if (!isMounted) {
-          console.log('⚠️ Component unmounted, skipping state update');
-          return;
-        }
-
-        if (error) {
-          console.error('❌ Supabase error:', error);
-          throw error;
-        }
+        if (error) throw error;
 
         // Transform database posts
         const transformedDbPosts = data && data.length > 0 ? data.map((post) => ({
@@ -946,21 +938,16 @@ const Blog = () => {
         // Combine database posts with hardcoded posts
         // Database posts appear first (more recent), then hardcoded posts
         const allPosts = [...transformedDbPosts, ...blogPosts];
-        
-        console.log(`✅ Total posts: ${allPosts.length} (${transformedDbPosts.length} from DB + ${blogPosts.length} hardcoded)`);
-        console.log('✨ Combined posts:', allPosts);
+
         setPosts(allPosts);
       } catch (error) {
-        console.error('❌ Error fetching blog posts:', error);
+        console.error('Error fetching blog posts:', error);
         if (isMounted) {
           setError('Gagal memuat artikel. Menggunakan artikel contoh.');
           setPosts(blogPosts);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-          console.log('✔️ Fetch complete, loading set to false');
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -968,14 +955,11 @@ const Blog = () => {
 
     return () => {
       isMounted = false;
-      console.log('🧹 Blog component unmounting - data fetch cleanup');
     };
   }, []);
 
   // Separate useEffect for IntersectionObserver animation
   useEffect(() => {
-    console.log('🎨 Setting up IntersectionObserver');
-    
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -997,33 +981,18 @@ const Blog = () => {
     }, 100);
 
     return () => {
-      console.log('🧹 Disconnecting IntersectionObserver');
       clearTimeout(timer);
       observer.disconnect();
     };
   }, [posts]); // Re-observe when posts change
 
-  // Debug useEffect to track state changes
-  useEffect(() => {
-    console.log('📊 STATE UPDATE - Loading:', loading, '| Posts count:', posts.length);
-  }, [loading, posts]);
-
   const handleWhatsApp = () => {
     const message = "Halo Storo.id, saya ingin konsultasi tentang jasa setup webstore dari Shopee";
-    window.open(`https://wa.me/6285148416700?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/6285157406969?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Debug Info - Development Only */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg text-xs z-50 font-mono shadow-lg">
-          <div className="font-bold mb-2">🔍 Debug Info</div>
-          <div>Loading: <span className={loading ? 'text-yellow-400' : 'text-green-400'}>{loading ? 'true' : 'false'}</span></div>
-          <div>Posts: <span className="text-blue-400">{posts.length}</span></div>
-          <div>Error: <span className="text-red-400">{error || 'none'}</span></div>
-        </div>
-      )}
       <Header />
       
       {/* Hero Section */}
@@ -1147,6 +1116,7 @@ const Blog = () => {
         </div>
       </section>
       <FloatingChatbot />
+      <Footer />
     </div>
   );
 };

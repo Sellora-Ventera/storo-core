@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, X, ChevronRight, MessageCircle } from "lucide-react";
 import { PLANS, formatIDR } from "@/lib/plans";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Harga Paket - Storo.id",
@@ -195,7 +197,8 @@ function getPlanFeature(plan: PricingPlan, feature: Feature): boolean {
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
+      <Header />
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/5 via-white to-secondary/5 pt-28 pb-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -465,6 +468,7 @@ export default function PricingPage() {
           </Button>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

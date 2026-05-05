@@ -5,7 +5,8 @@
 **storo.id** adalah website utama platform Storo — layanan webstore terkelola (model agensi) oleh VenteraAI. Repo ini (`storo-id-landingpage`) menangani:
 
 - Landing page marketing (storo.id)
-- Portal & dashboard client (`/dashboard`)
+- Portal & dashboard client (`/dashboard`) — **admin panel tunggal multi-toko**
+- **Per-store admin** (`/dashboard/[storeId]/*`): CRUD produk, pesanan, pelanggan, banner, promo, blog, kategori, loyalty, membership, reviews, free-shipping, messages, notifications, leads, settings (payment & shipping)
 - Order-first onboarding wizard 5 langkah (`/(onboarding)`) — guest-accessible, tanpa auth
 - Dashboard superadmin (`/(superadmin)`)
 - Sistem referral via sharelink.id (`/r/[code]`)
@@ -13,7 +14,7 @@
 - Billing & disbursement
 - Checkout & payment (Xendit direct API call dari server route)
 
-**Terpisah dari storoengine** (template engine webstore) — storoengine menangani storefront, admin, payment, shipping, import Shopee. Keduanya berbagi database Supabase yang sama (multi-tenant via `store_id`).
+**Terpisah dari storoengine** (template engine webstore) — storoengine sekarang **hanya storefront publik** (produk browsing, cart, checkout, buyer account, blog display). Semua admin dashboard dan admin API telah dipindahkan dari storoengine ke sini. Keduanya berbagi database Supabase yang sama (multi-tenant via `store_id` + `stores.client_id`).
 
 ## Tech Stack
 
@@ -35,10 +36,32 @@
 src/
 ├── app/
 │   ├── (auth)/           # Halaman sign-in, sign-up (tetap ada, bukan flow utama)
-│   ├── (dashboard)/      # Dashboard client (toko, billing, referral)
+│   ├── (dashboard)/      # Dashboard client
+│   │   ├── dashboard/
+│   │   │   ├── (account)/  # Account-level: billing, profile, referral, domains, stores list
+│   │   │   │   └── layout.tsx  # AccountSidebar
+│   │   │   └── [storeId]/  # Per-store admin panel
+│   │   │       ├── layout.tsx  # StoreSidebar + ownership check
+│   │   │       ├── page.tsx    # Overview (stats)
+│   │   │       ├── products/   # CRUD produk
+│   │   │       ├── orders/     # Pesanan
+│   │   │       ├── categories/ # Kategori
+│   │   │       ├── customers/  # Pelanggan
+│   │   │       ├── banners/    # Banner
+│   │   │       ├── promos/     # Promo
+│   │   │       ├── blog/       # Blog CMS
+│   │   │       ├── loyalty/    # Loyalty config
+│   │   │       ├── membership/ # Membership tiers
+│   │   │       ├── reviews/    # Moderasi review
+│   │   │       ├── free-shipping/ # Free shipping rules
+│   │   │       ├── messages/   # Pesan masuk
+│   │   │       ├── notifications/ # Notifikasi
+│   │   │       ├── leads/      # Leads
+│   │   │       └── settings/   # Store settings (payment, shipping)
 │   ├── (onboarding)/     # Order-first wizard 5 langkah (guest-accessible)
 │   ├── (superadmin)/     # Dashboard admin VenteraAI
 │   ├── api/
+│   │   ├── store/[storeId]/  # Per-store admin API (CRUD all entities)
 │   │   ├── onboarding/
 │   │   │   ├── submit/   # Lead capture lama (backward compat)
 │   │   │   └── checkout/ # Order-first: create user + client + invoice + Xendit
@@ -51,9 +74,21 @@ src/
 │   ├── templates/        # Galeri template
 │   └── page.tsx          # Landing page
 ├── components/
+│   ├── dashboard/
+│   │   ├── account/       # AccountSidebar (billing, profile, referral, dll.)
+│   │   └── store/         # Per-store admin components
+│   │       ├── StoreSidebar.tsx    # Sidebar + StoreSwitcher
+│   │       ├── StoreSwitcher.tsx   # Dropdown multi-toko
+│   │       ├── ui.tsx              # Reusable UI (StoreCard, StatusBadge, dll.)
+│   │       ├── settings/           # Settings forms (payment, shipping)
+│   │       ├── products/           # Product form
+│   │       └── ...                 # Other per-store components
 │   └── onboarding/       # OnboardingWizard.tsx (5-step wizard utama)
 ├── lib/
 │   ├── auth/             # Wrapper tipis di atas Supabase Auth
+│   ├── store/
+│   │   ├── context.ts    # getStoreForUser(), authorizeStoreApi() — auth + ownership
+│   │   └── queries.ts    # Per-store Supabase queries (products, orders, dll.)
 │   ├── supabase/         # Setup Supabase client (server + browser)
 │   ├── plans.ts          # Single source of truth: plan data & pricing
 │   ├── dal.ts            # Data access layer
@@ -103,9 +138,10 @@ Landing page CTA "Pesan Toko"
    /onboarding (guest, tanpa auth)
    OnboardingWizard.tsx — 5 step:
    ┌─────────────────────────────────────────┐
-   │ Step 1: Profil (nama, WA, nama toko)    │
-   │ Step 2: Pilih Paket (dari lib/plans.ts) │
-   │ Step 3: Domain (opsional, Namecheap)    │
+   │ Step 1: Pilih Paket (dari lib/plans.ts) │
+   │ Step 2: Domain (subdomain wajib, custom │
+   │         opsional via Namecheap)         │
+   │ Step 3: Profil (nama, WA, nama toko)    │
    │ Step 4: Buat Akun (email + password)    │
    │ Step 5: Ringkasan → Bayar               │
    │   POST /api/onboarding/checkout         │

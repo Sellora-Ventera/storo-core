@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Store, TrendingUp, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,13 +78,13 @@ const ExitIntentPopup = () => {
       const message = `Halo Storo.id! Saya tertarik untuk membuat webstore mandiri.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
       
       // Open WhatsApp
-      window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
+      window.open(`https://wa.me/6285157406969?text=${message}`, '_blank');
       
       // Track Google Ads conversion
       trackConversion();
       
       toast({
-        title: "Pilihan yang tepat! 🎉",
+        title: "Pilihan yang tepat!",
         description: "Data Anda tersimpan dan tim kami akan segera menghubungi Anda untuk membantu membuat webstore mandiri.",
       });
       
@@ -105,13 +106,13 @@ const ExitIntentPopup = () => {
         localStorage.setItem("storo-exit-intent-seen", "true");
         
         const message = `Halo Storo.id! Saya tertarik untuk membuat webstore mandiri.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
-        window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
+        window.open(`https://wa.me/6285157406969?text=${message}`, '_blank');
         
         // Track Google Ads conversion
         trackConversion();
         
         toast({
-          title: "Pilihan yang tepat! 🎉",
+          title: "Pilihan yang tepat!",
           description: "Tim kami akan segera menghubungi Anda untuk membantu membuat webstore mandiri.",
         });
         
@@ -149,11 +150,11 @@ const ExitIntentPopup = () => {
         
         <DialogHeader className="text-center">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
-            Yakin Ngga mau Bikin Webstore Mandiri 😮
+            Yakin Ngga mau Bikin Webstore Mandiri?
           </DialogTitle>
-          <p className="text-muted-foreground mt-2">
+          <DialogDescription className="text-muted-foreground mt-2">
             Website = brand sendiri. Marketplace = numpang. Yuk bikin webstore sekarang!
-          </p>
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
@@ -194,10 +195,10 @@ const ExitIntentPopup = () => {
           </Button>
         </form>
         
-        <div className="flex items-center justify-center space-x-4 mt-4 text-sm text-muted-foreground">
-          <span>🏪 Brand Sendiri</span>
-          <span>💰 Profit Lebih Besar</span>
-          <span>🚀 Tanpa Komisi</span>
+        <div className="flex items-center justify-center gap-4 mt-4 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5"><Store className="w-4 h-4" /> Brand Sendiri</span>
+          <span className="inline-flex items-center gap-1.5"><TrendingUp className="w-4 h-4" /> Profit Lebih Besar</span>
+          <span className="inline-flex items-center gap-1.5"><Rocket className="w-4 h-4" /> Tanpa Komisi</span>
         </div>
       </DialogContent>
     </Dialog>

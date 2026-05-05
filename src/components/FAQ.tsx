@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -65,7 +65,7 @@ const FAQ = () => {
           <p className="text-gray-600 mb-4">Masih ada pertanyaan lain?</p>
           <button 
             className="btn-secondary"
-            onClick={() => window.open('https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20ada%20pertanyaan%20tentang%20webstore', '_blank')}
+            onClick={() => window.open('https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20ada%20pertanyaan%20tentang%20webstore', '_blank')}
           >
             Tanya Langsung via WhatsApp
           </button>

@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Store, ChevronRight, MessageCircle } from "lucide-react";
+import { Store, ChevronRight, MessageCircle, ExternalLink } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Template Toko - Storo.id",
@@ -82,7 +84,8 @@ export default async function TemplatesPage() {
     templates && templates.length > 0 ? templates : fallbackTemplates;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
+      <Header />
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/5 via-white to-secondary/5 pt-28 pb-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -191,27 +194,40 @@ export default async function TemplatesPage() {
 
                   {/* Buttons */}
                   <div className="flex gap-2 mt-auto">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 rounded-lg text-xs font-medium border-gray-200"
-                    >
-                      <a
-                        href={template.demo_url ?? "#"}
-                        target={template.demo_url ? "_blank" : "_self"}
-                        rel="noopener noreferrer"
+                    {template.demo_url ? (
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 rounded-lg text-xs font-medium border-gray-200"
                       >
-                        Live Demo
-                      </a>
-                    </Button>
+                        <a
+                          href={template.demo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Live Demo
+                          <ExternalLink className="w-3 h-3 ml-1.5" />
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="flex-1 rounded-lg text-xs font-medium border-gray-200 cursor-not-allowed"
+                        title="Demo akan segera tersedia"
+                      >
+                        Demo Segera Hadir
+                      </Button>
+                    )}
                     <Button
                       asChild
                       size="sm"
                       className="flex-1 rounded-lg text-xs font-medium bg-primary hover:bg-primary/90 text-white"
                     >
                       <Link
-                        href={`/sign-up?template=${encodeURIComponent(template.name)}`}
+                        href={`/onboarding?template=${encodeURIComponent(template.name)}`}
                       >
                         Pilih Template
                       </Link>
@@ -245,6 +261,7 @@ export default async function TemplatesPage() {
           </Button>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

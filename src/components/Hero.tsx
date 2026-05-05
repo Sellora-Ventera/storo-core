@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Hero = () => {
@@ -41,7 +42,7 @@ const Hero = () => {
               variant="outline"
               size="lg"
               className="text-lg border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white cursor-pointer"
-              onClick={() => window.open('https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20gratis%20untuk%20webstore', '_blank')}
+              onClick={() => window.open('https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20gratis%20untuk%20webstore', '_blank')}
             >
               Konsultasi Gratis
             </Button>
@@ -50,8 +51,11 @@ const Hero = () => {
           {/* Trust indicators */}
           <div className="mt-12 fade-in">
             <p className="text-sm text-gray-500 mb-4">Dipercaya oleh 500+ seller Shopee</p>
-            <div className="flex justify-center items-center space-x-8 opacity-60">
-              <div className="text-2xl font-bold text-primary">⭐ 4.9/5</div>
+            <div className="flex justify-center items-center space-x-8 opacity-80">
+              <div className="flex items-center gap-2 text-2xl font-bold text-primary">
+                <Star className="w-6 h-6 fill-secondary text-secondary" />
+                4.9/5
+              </div>
               <div className="text-sm text-gray-600">Rating dari klien</div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { MessageCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const ClosingCTA = () => {
@@ -10,7 +11,7 @@ const ClosingCTA = () => {
           <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">
             Mulai Bangun Webstore Milikmu Sekarang
           </h2>
-          
+
           <p className="text-xl md:text-2xl mb-8 opacity-90 leading-relaxed">
             Cukup kirim file Excel Shopee, sisanya biar Storo.id yang urus.
           </p>
@@ -25,9 +26,15 @@ const ClosingCTA = () => {
             </Button>
           </div>
 
-          <div className="mt-8 text-lg opacity-80">
-            <p>💬 Respon cepat dalam 5 menit</p>
-            <p>🎯 Konsultasi gratis tanpa komitmen</p>
+          <div className="mt-8 text-base md:text-lg opacity-80 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+            <span className="inline-flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 shrink-0" />
+              Respon cepat dalam 5 menit
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Target className="w-5 h-5 shrink-0" />
+              Konsultasi gratis tanpa komitmen
+            </span>
           </div>
         </div>
       </div>
