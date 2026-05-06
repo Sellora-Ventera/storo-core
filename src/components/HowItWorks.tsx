@@ -6,18 +6,18 @@ const HowItWorks = () => {
   const steps = [
     {
       step: "1",
-      title: "Export produk dari Seller Center",
-      description: "Download file Excel dari dashboard Shopee Seller Center Anda"
+      title: "Pesan online (5 menit)",
+      description: "Pilih paket, domain, dan nama toko di /onboarding. Bayar langsung via Xendit (transfer, e-wallet, QRIS, kartu kredit)."
     },
     {
-      step: "2", 
-      title: "Kirim file Excel ke Storo.id",
-      description: "Upload file melalui form atau kirim langsung via WhatsApp"
+      step: "2",
+      title: "Kirim data produk",
+      description: "Upload file Excel dari Seller Center, atau cukup kirim link toko Shopee Anda — tim kami yang import semua produk, foto, dan harga."
     },
     {
       step: "3",
-      title: "Webstore siap transaksi",
-      description: "Produk, ongkir, dan pembayaran langsung aktif dalam 1-3 hari kerja"
+      title: "Webstore Anda live",
+      description: "Dalam 1–3 hari kerja toko siap menerima pesanan. Payment, ongkir, loyalty, blog — semua sudah terhubung dan langsung jalan."
     }
   ];
 
@@ -26,11 +26,11 @@ const HowItWorks = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Cara Pindah dari Shopee ke{" "}
-            <span className="text-primary">Webstore Sendiri</span>
+            Pindah dari Marketplace ke{" "}
+            <span className="text-primary">Webstore Sendiri — 3 Langkah</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Hanya 3 langkah mudah untuk memiliki toko online sendiri di luar marketplace
+            Anda fokus jualan, biar urusan teknis (server, payment, ongkir, integrasi) tim kami yang kerjakan.
           </p>
         </div>
 
@@ -62,9 +62,9 @@ const HowItWorks = () => {
           {/* CTA after steps */}
           <div className="text-center mt-12">
             <p className="text-lg text-gray-600 mb-6">
-              Tidak yakin? Konsultasi dulu gratis!
+              Belum yakin paket mana yang cocok? Konsultasi dulu — gratis, tanpa komitmen.
             </p>
-            <Button 
+            <Button
               variant="secondary"
               onClick={() => window.open('https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20mau%20tanya%20tentang%20cara%20kerja%20webstore', '_blank')}
             >

@@ -17,9 +17,9 @@ import TemplateShowcase from "@/components/TemplateShowcase";
 import ScrollAnimator from "@/components/ScrollAnimator";
 
 export const metadata: Metadata = {
-  title: "Buat Webstore dari Shopee — Tanpa Ribet | Storo.id",
+  title: "Webstore Sendiri Tanpa Fee 28% — Setup Beres dalam 1-3 Hari | Storo.id",
   description:
-    "Punya toko online sendiri dari Shopee tanpa coding. Setup lengkap oleh tim kami — domain custom, pembayaran (GoPay, OVO, transfer bank), 11+ kurir real-time. Jasa pembuatan webstore terkelola, siap transaksi dalam 1-3 hari kerja.",
+    "Pindah dari Shopee ke webstore sendiri tanpa coding. Tim Storo setup lengkap — domain custom, payment gateway (GoPay/OVO/QRIS/transfer), 11+ kurir real-time, loyalty & membership, blog SEO, multi-store dashboard. Hemat 23% per transaksi, data pelanggan 100% milik Anda. Live 1-3 hari kerja.",
   alternates: {
     canonical: "https://storo.id",
   },
@@ -32,7 +32,7 @@ const organizationJsonLd = {
   url: "https://storo.id",
   logo: "https://storo.id/og-image.png",
   description:
-    "Jasa pembuatan webstore terkelola untuk seller Shopee Indonesia. Domain custom, payment gateway, ongkir real-time.",
+    "Jasa pembuatan webstore terkelola untuk seller Indonesia. Setup beres oleh tim — payment gateway, ongkir real-time, loyalty & membership, blog SEO, multi-store dashboard. Hemat 23% per transaksi vs marketplace.",
   contactPoint: {
     "@type": "ContactPoint",
     telephone: "+6285157406969",
@@ -48,34 +48,42 @@ const faqJsonLd = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "Apakah produk saya aman jika dikirim ke Storo.id?",
+      name: "Apakah data pelanggan benar-benar milik saya?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Ya, file Excel Anda hanya digunakan untuk setup webstore milik Anda sendiri. Kami tidak menyimpan atau menggunakan data produk untuk keperluan lain.",
+        text: "100% milik Anda. Semua nama, nomor WA, email, dan riwayat transaksi pelanggan tersimpan di dashboard toko Anda — bisa di-export kapan saja, bisa di-broadcast promo, bisa dipakai untuk retargeting di Meta atau Google.",
       },
     },
     {
       "@type": "Question",
-      name: "Apakah bisa custom desain webstore?",
+      name: "Berapa biaya per transaksi di Storo.id?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Bisa! Sesuai paket yang dipilih. Paket Pro sudah include template custom, sedangkan Enterprise bisa full custom sesuai brand Anda.",
+        text: "Cuma 5% per transaksi (1% biaya operasional Storo + 4% payment gateway). Bandingkan dengan Shopee yang sampai 28%. Untuk seller dengan omset Rp50jt/bulan, hemat sekitar Rp11,5jt/bulan.",
       },
     },
     {
       "@type": "Question",
-      name: "Berapa lama proses pembuatan webstore dari Shopee?",
+      name: "Apakah saya bisa kelola loyalty point dan membership?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Untuk paket Starter dan Pro: 1-3 hari kerja. Untuk Enterprise: 5-7 hari kerja tergantung kompleksitas custom yang diminta.",
+        text: "Ya, semua paket sudah include fitur loyalty point dan membership tier (Bronze/Silver/Gold). Anda bisa atur sendiri rasio poin per pembelian, syarat upgrade tier, dan benefit khusus member dari dashboard.",
       },
     },
     {
       "@type": "Question",
-      name: "Berapa biaya membuat webstore sendiri dari Shopee?",
+      name: "Bisa kelola berapa toko dengan 1 akun?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Storo.id menawarkan beberapa paket mulai dari Starter hingga Enterprise. Hosting dan domain sudah include untuk tahun pertama. Setelah itu ada biaya maintenance minimal Rp200.000/bulan.",
+        text: "Bisa banyak toko (multi-store) dari satu akun. Cocok untuk Anda yang punya beberapa brand atau jualan di kategori berbeda. Tinggal switch antar toko di dashboard, tanpa harus login-logout.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Berapa lama proses pembuatan webstore?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Paket Starter, Pro, Advance, dan Flexible: 1-3 hari kerja setelah pembayaran. Paket Custom: 5-7 hari kerja tergantung kompleksitas desain dan integrasi yang diminta.",
       },
     },
     {
@@ -83,7 +91,15 @@ const faqJsonLd = {
       name: "Apakah ada biaya bulanan setelah webstore jadi?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Hosting dan domain sudah include untuk tahun pertama. Setelah itu ada biaya maintenance minimal Rp200rb/bulan untuk hosting dan update.",
+        text: "Ya, ada biaya bulanan untuk maintenance, hosting, update sistem, dan support — mulai dari Rp250.000 per bulan tergantung paket. Detail lengkap bisa dicek di halaman pricing.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Apakah bisa pakai domain sendiri seperti tokosaya.com?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Bisa. Anda bisa pakai subdomain gratis (namatoko.storo.id) atau beli domain custom .com / .co.id / .id langsung dari platform kami. Setup DNS dan SSL kami yang urus.",
       },
     },
     {
@@ -91,7 +107,7 @@ const faqJsonLd = {
       name: "Apakah bisa integrasi dengan marketplace lain selain Shopee?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Saat ini fokus ke Shopee dulu. Ke depan akan support Tokopedia dan Lazada juga. Bisa request fitur ini untuk development selanjutnya.",
+        text: "Saat ini fokus migrasi dari Shopee dulu. Tokopedia, Lazada, dan TikTok Shop ada di roadmap pengembangan. Anda bisa request fitur ini saat onboarding.",
       },
     },
   ],

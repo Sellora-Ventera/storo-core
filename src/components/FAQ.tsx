@@ -5,28 +5,40 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 const FAQ = () => {
   const faqs = [
     {
-      question: "Apakah produk saya aman?",
-      answer: "Ya, file Excel Anda hanya digunakan untuk setup webstore milik Anda sendiri. Kami tidak menyimpan atau menggunakan data produk untuk keperluan lain."
+      question: "Apakah data pelanggan benar-benar milik saya?",
+      answer: "100% milik Anda. Semua nama, nomor WA, email, dan riwayat transaksi pelanggan tersimpan di dashboard toko Anda — bisa di-export kapan saja, bisa di-broadcast promo, bisa dipakai untuk retargeting di Meta/Google. Beda dengan Shopee yang menyembunyikan kontak pelanggan."
     },
     {
-      question: "Apakah bisa custom desain?",
-      answer: "Bisa! Sesuai paket yang dipilih. Paket Pro sudah include template custom, sedangkan Enterprise bisa full custom sesuai brand Anda."
+      question: "Berapa biaya sebenarnya per transaksi?",
+      answer: "Cuma 5% per transaksi (1% biaya operasional Storo + 4% payment gateway). Bandingkan dengan Shopee yang sampai 28% per transaksi. Untuk seller dengan omset Rp50jt/bulan, Anda bisa hemat sekitar Rp11,5jt/bulan."
     },
     {
-      question: "Apakah perlu login dashboard rumit?",
-      answer: "Tidak perlu! Order dari webstore dikelola melalui WooCommerce dashboard yang user-friendly untuk update stok, harga, dan monitoring order."
+      question: "Apakah produk saya aman saat setup?",
+      answer: "Aman. File Excel atau data produk Anda hanya kami gunakan untuk setup webstore milik Anda sendiri. Tidak disimpan untuk keperluan lain, tidak dibagikan ke pihak ketiga."
+    },
+    {
+      question: "Apakah saya bisa kelola loyalty point dan membership?",
+      answer: "Ya, semua paket sudah include fitur loyalty point dan membership tier (Bronze/Silver/Gold). Anda bisa atur sendiri rasio poin per pembelian, syarat upgrade tier, dan benefit khusus member dari dashboard."
+    },
+    {
+      question: "Bisa kelola berapa toko dengan 1 akun?",
+      answer: "Bisa banyak toko (multi-store) dari satu akun. Cocok untuk Anda yang punya beberapa brand atau jualan di kategori berbeda. Tinggal switch antar toko di dashboard, tanpa harus login-logout."
+    },
+    {
+      question: "Apakah bisa pakai domain sendiri seperti tokosaya.com?",
+      answer: "Bisa. Anda bisa pakai subdomain gratis (namatoko.storo.id) atau beli domain custom .com / .co.id / .id langsung dari platform kami. Setup DNS dan SSL kami yang urus."
     },
     {
       question: "Berapa lama proses pembuatan webstore?",
-      answer: "Untuk paket Starter dan Pro: 1-3 hari kerja. Untuk Enterprise: 5-7 hari kerja tergantung kompleksitas custom yang diminta."
+      answer: "Paket Starter, Pro, Advance & Flexible: 1–3 hari kerja setelah pembayaran. Paket Custom: 5–7 hari kerja tergantung kompleksitas desain dan integrasi yang diminta."
     },
     {
       question: "Apakah ada biaya bulanan setelah webstore jadi?",
-      answer: "Hosting dan domain sudah include untuk tahun pertama. Setelah itu ada biaya maintenance minimal Rp200rb/bulan untuk hosting dan update."
+      answer: "Ya, ada biaya bulanan untuk maintenance, hosting, update sistem, dan support — mulai dari Rp250rb/bulan tergantung paket. Detail lengkap bisa dicek di halaman pricing."
     },
     {
       question: "Bisa integrasi dengan marketplace lain selain Shopee?",
-      answer: "Saat ini fokus ke Shopee dulu. Tapi ke depan kami akan support Tokopedia dan Lazada juga. Bisa request fitur ini untuk development selanjutnya."
+      answer: "Saat ini fokus migrasi dari Shopee dulu. Tokopedia, Lazada, dan TikTok Shop ada di roadmap pengembangan. Anda bisa request fitur ini saat onboarding."
     }
   ];
 
@@ -38,7 +50,7 @@ const FAQ = () => {
             Pertanyaan yang Sering Ditanyakan
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Jawaban untuk pertanyaan umum tentang layanan Storo.id
+            Jawaban untuk hal-hal yang biasanya jadi pertimbangan sebelum pindah dari marketplace ke webstore sendiri.
           </p>
         </div>
 
