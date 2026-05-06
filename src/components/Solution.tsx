@@ -5,8 +5,8 @@ import {
   CreditCard,
   Truck,
   Globe,
-  LayoutDashboard,
-  Gift,
+  Crown,
+  Search,
   ArrowRight,
 } from "lucide-react";
 
@@ -14,44 +14,44 @@ const features = [
   {
     icon: ShieldCheck,
     color: "primary",
-    title: "Toko Jadi, Anda Terima Beres",
+    title: "Setup Beres oleh Tim Kami",
     description:
-      "Tim Storo yang setup semuanya — ribuan produk, foto, deskripsi, payment gateway, ongkir, hingga domain. Anda tidak perlu sentuh apapun. Dalam 1–3 hari kerja, toko online Anda langsung live.",
+      "Anda tidak perlu sentuh coding, hosting, atau template builder. Tim Storo yang setup semuanya — produk, kategori, banner, foto, deskripsi, payment, ongkir, sampai domain. Dalam 1–3 hari kerja toko Anda live.",
   },
   {
     icon: CreditCard,
     color: "secondary",
-    title: "Payment Gateway Siap Pakai",
+    title: "Bayar Apapun, Dana Langsung Cair",
     description:
-      "Xendit & Midtrans sudah terhubung. Terima transfer bank, e-wallet (GoPay, OVO, Dana), QRIS, dan kartu kredit. Dana masuk langsung ke rekening Anda.",
+      "Xendit + Midtrans sudah terhubung. Terima transfer bank, e-wallet (GoPay, OVO, Dana, ShopeePay), QRIS, kartu kredit, dan paylater. Cuma 5% per transaksi (vs 28% Shopee) — dana masuk rekening Anda.",
   },
   {
     icon: Truck,
     color: "primary",
-    title: "Ongkir Otomatis 11+ Kurir",
+    title: "Ongkir Real-time 11+ Kurir",
     description:
-      "JNE, J&T, SiCepat, AnterAja, Pos Indonesia, dan kurir lainnya via Biteship. Harga ongkir real-time langsung di checkout — pelanggan pilih sendiri.",
+      "JNE, J&T, SiCepat, AnterAja, Pos, Ninja, dan lainnya via Biteship. Pelanggan pilih kurir sendiri di checkout. Bisa atur gratis ongkir per area (Jabodetabek, Jawa, atau seluruh Indonesia) untuk bikin pelanggan balik beli.",
   },
   {
-    icon: Gift,
+    icon: Crown,
     color: "secondary",
-    title: "Promo Gratis Ongkir & Subsidi Ongkir",
+    title: "Loyalty & Membership Bawaan",
     description:
-      "Buat promo gratis ongkir untuk area tertentu — misalnya khusus Jabodetabek, Pulau Jawa, atau subsidi ongkir ke seluruh Indonesia. Tanpa biaya iklan, repeat order naik karena pelanggan makin sering balik ke toko Anda.",
+      "Fitur poin loyalty dan tier membership (Bronze/Silver/Gold) sudah terpasang dari hari pertama. Pelanggan beli → dapat poin → tukar diskon → balik beli lagi. Repeat order auto-naik tanpa biaya iklan tambahan.",
   },
   {
-    icon: LayoutDashboard,
+    icon: Search,
     color: "primary",
-    title: "Dashboard Kelola Toko Sendiri",
+    title: "Blog SEO + Promo Codes",
     description:
-      "Setelah toko live, Anda bisa pantau pesanan, update stok, tambah produk baru, dan kelola konten toko dari dashboard yang sederhana — kapanpun, dari HP sekalipun.",
+      "CMS blog untuk artikel produk & tutorial — dapat traffic Google gratis. Plus sistem kode promo, banner homepage, dan ulasan pelanggan terverifikasi. Konversi naik, biaya akuisisi turun.",
   },
   {
     icon: Globe,
     color: "secondary",
-    title: "Domain & Brand Sendiri",
+    title: "Domain Sendiri & Multi-Toko",
     description:
-      "Gunakan subdomain gratis (namatoko.storo.id) atau beli domain .com/.co.id/.id langsung dari platform. Pelanggan kenal brand Anda — bukan nama marketplace.",
+      "Pakai subdomain gratis (namatoko.storo.id) atau domain .com/.co.id/.id custom. Punya beberapa brand? Kelola semua toko dari satu akun, satu dashboard — tinggal switch antar toko.",
   },
 ];
 
@@ -62,14 +62,15 @@ const Solution = () => {
         {/* Header */}
         <div className="text-center mb-16 fade-in">
           <span className="inline-block text-sm font-semibold text-primary bg-primary/10 px-4 py-1.5 rounded-full mb-4">
-            Kenapa Storo.id?
+            Solusi Storo.id
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Webstore Lengkap Siap Transaksi,{" "}
-            <span className="text-primary">Anda Terima Beres</span>
+            Webstore Lengkap Siap Jualan,{" "}
+            <span className="text-primary">Bukan Cuma Template Kosong</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Bukan sekadar template kosong — Tim Storo setup semua dari nol sampai webstore siap menerima pesanan
+            Semua fitur yang Anda butuhkan untuk pindah dari marketplace ke toko sendiri —
+            sudah terpasang, sudah terhubung, dan dikelola tim kami.
           </p>
         </div>
 
@@ -111,12 +112,13 @@ const Solution = () => {
         <div className="mt-14 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/10 rounded-2xl p-8 max-w-4xl mx-auto fade-in">
           <div className="text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-3">
-              Omset Naik Tanpa Biaya Iklan
+              Hemat 23% Per Transaksi, Repeat Order Naik Tanpa Iklan
             </h3>
             <p className="text-gray-600 leading-relaxed max-w-2xl mx-auto mb-6">
-              Di webstore sendiri, pelanggan lama <strong>sudah kenal brand kamu</strong>.
-              Kasih promo gratis ongkir atau subsidi ongkir — mereka balik beli lagi
-              tanpa kamu perlu bayar iklan. Retensi naik, omset naik, margin terjaga.
+              Fee Storo cuma <strong>5%</strong> (vs 28% Shopee) — itu saja sudah hemat
+              puluhan juta per tahun untuk seller dengan omset Rp500jt/tahun. Tambah
+              loyalty point, membership, dan promo gratis ongkir, pelanggan lama balik
+              beli sendiri. <strong>Margin terjaga, brand jadi milik Anda.</strong>
             </p>
             <Button asChild className="btn-hero gap-2 cursor-pointer">
               <Link href="/onboarding">

@@ -9,11 +9,12 @@ const ClosingCTA = () => {
       <div className="container mx-auto px-6 text-center">
         <div className="max-w-4xl mx-auto text-white">
           <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">
-            Mulai Bangun Webstore Milikmu Sekarang
+            Saatnya Toko Anda Bekerja untuk Anda — Bukan untuk Marketplace
           </h2>
 
           <p className="text-xl md:text-2xl mb-8 opacity-90 leading-relaxed">
-            Cukup kirim file Excel Shopee, sisanya biar Storo.id yang urus.
+            Pesan webstore hari ini, live dalam 1–3 hari kerja. Setup beres, hemat 23% per
+            transaksi, data pelanggan jadi milik Anda — selamanya.
           </p>
 
           <div className="space-y-4 md:space-y-0 md:space-x-6 md:flex md:justify-center md:items-center">
