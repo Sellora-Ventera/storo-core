@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Wallet, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { StoreCard } from "@/components/dashboard/store/ui";
+import type { BillingModel } from "@/lib/store/context";
 
 export type PaymentSettingsInitial = {
-  use_storo_gateway: boolean;
+  billing_model: BillingModel;
   xendit_secret_key: string;
   xendit_public_key: string;
   midtrans_server_key: string;
@@ -25,7 +26,7 @@ export default function PaymentSettingsForm({
   initial: PaymentSettingsInitial;
 }) {
   const router = useRouter();
-  const [useStoroGateway, setUseStoroGateway] = useState(initial.use_storo_gateway);
+  const [billingModel, setBillingModel] = useState<BillingModel>(initial.billing_model);
   const [xenditSecret, setXenditSecret] = useState(initial.xendit_secret_key);
   const [xenditPublic, setXenditPublic] = useState(initial.xendit_public_key);
   const [midtransServer, setMidtransServer] = useState(initial.midtrans_server_key);
@@ -39,7 +40,7 @@ export default function PaymentSettingsForm({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          use_storo_gateway: useStoroGateway,
+          billing_model: billingModel,
           xendit_secret_key: xenditSecret,
           xendit_public_key: xenditPublic,
           midtrans_server_key: midtransServer,
@@ -58,33 +59,83 @@ export default function PaymentSettingsForm({
     }
   }
 
+  const showOwnGatewayKeys = billingModel === "own_prepaid";
+
   return (
     <div className="space-y-5 max-w-2xl">
       <StoreCard>
-        <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Gateway</h2>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={useStoroGateway}
-            onChange={(e) => setUseStoroGateway(e.target.checked)}
-            className="size-4 mt-1 cursor-pointer accent-primary"
-          />
-          <span>
-            <span className="block text-sm font-medium text-[#0F172A]">
-              Pakai Payment Gateway Storo (default)
-            </span>
-            <span className="block text-xs text-[#64748B] mt-0.5">
-              Semua transaksi masuk ke akun Xendit VenteraAI. Fee: 1% ops + 4% PG = 5% total. Disbursement
-              manual ke Anda. Matikan jika Anda mau pakai API key Xendit/Midtrans sendiri (fee 1% ops saja).
-            </span>
-          </span>
-        </label>
+        <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Model Billing</h2>
+        <p className="text-xs text-[#64748B] mb-4">
+          Pilih bagaimana pembayaran buyer diproses dan bagaimana Storo mengambil ops fee.
+        </p>
+
+        <div className="space-y-3">
+          {/* Storo Gateway option */}
+          <label
+            className={`flex items-start gap-3 cursor-pointer p-4 rounded-xl border-2 transition ${
+              billingModel === "storo_gateway"
+                ? "border-primary bg-primary/5"
+                : "border-[#E5E8EF] hover:border-primary/30"
+            }`}
+          >
+            <input
+              type="radio"
+              name="billing_model"
+              value="storo_gateway"
+              checked={billingModel === "storo_gateway"}
+              onChange={() => setBillingModel("storo_gateway")}
+              className="size-4 mt-0.5 cursor-pointer accent-primary"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-primary" />
+                <span className="text-sm font-semibold text-[#0F172A]">
+                  Storo Gateway (Direkomendasikan)
+                </span>
+              </div>
+              <span className="block text-xs text-[#64748B] mt-1.5">
+                Buyer bayar via akun Xendit/Midtrans Storo. Storo potong 5% (1% ops + 4% PG)
+                otomatis sebelum disburse net amount ke rekening Anda. Tidak perlu setup PG sendiri.
+              </span>
+            </div>
+          </label>
+
+          {/* Own Prepaid option */}
+          <label
+            className={`flex items-start gap-3 cursor-pointer p-4 rounded-xl border-2 transition ${
+              billingModel === "own_prepaid"
+                ? "border-primary bg-primary/5"
+                : "border-[#E5E8EF] hover:border-primary/30"
+            }`}
+          >
+            <input
+              type="radio"
+              name="billing_model"
+              value="own_prepaid"
+              checked={billingModel === "own_prepaid"}
+              onChange={() => setBillingModel("own_prepaid")}
+              className="size-4 mt-0.5 cursor-pointer accent-primary"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Wallet className="size-4 text-[#64748B]" />
+                <span className="text-sm font-semibold text-[#0F172A]">
+                  Own Gateway + Prepaid Wallet
+                </span>
+              </div>
+              <span className="block text-xs text-[#64748B] mt-1.5">
+                Buyer bayar via akun Xendit/Midtrans Anda sendiri (uang langsung masuk rekening Anda).
+                Storo potong 1% ops fee dari saldo wallet prabayar.
+              </span>
+            </div>
+          </label>
+        </div>
       </StoreCard>
 
-      {!useStoroGateway ? (
+      {showOwnGatewayKeys ? (
         <>
           <StoreCard>
-            <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Xendit (custom)</h2>
+            <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Xendit (akun Anda)</h2>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
@@ -113,7 +164,7 @@ export default function PaymentSettingsForm({
           </StoreCard>
 
           <StoreCard>
-            <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Midtrans (custom)</h2>
+            <h2 className="text-sm font-semibold text-[#0F172A] mb-3">Midtrans (akun Anda)</h2>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-[#0F172A] mb-1.5">

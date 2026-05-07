@@ -29,7 +29,7 @@ interface PricingPlan {
   ctaVariant?: "primary" | "outline" | "wa";
 }
 
-const plans: PricingPlan[] = PLANS.map((p) => ({
+const plans: PricingPlan[] = PLANS.filter((p) => p.isActive).map((p) => ({
   id: p.id,
   name: p.name,
   setup: p.setup,
@@ -44,118 +44,24 @@ const plans: PricingPlan[] = PLANS.map((p) => ({
 
 interface Feature {
   label: string;
-  starter: boolean;
-  pro: boolean;
-  advance: boolean;
-  flexible: boolean;
+  standard: boolean;
   custom: boolean;
 }
 
 const features: Feature[] = [
-  {
-    label: "Import produk dari Shopee",
-    starter: true,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Custom domain",
-    starter: true,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Payment gateway (Xendit)",
-    starter: true,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Ongkos kirim otomatis (Biteship)",
-    starter: true,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Dashboard dasar",
-    starter: true,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Blog & SEO tools",
-    starter: false,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Promo & kode diskon",
-    starter: false,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Analitik penjualan",
-    starter: false,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Prioritas support",
-    starter: false,
-    pro: true,
-    advance: true,
-    flexible: true,
-    custom: true,
-  },
-  {
-    label: "Multi-admin",
-    starter: false,
-    pro: false,
-    advance: true,
-    flexible: false,
-    custom: true,
-  },
-  {
-    label: "Custom theme/design",
-    starter: false,
-    pro: false,
-    advance: true,
-    flexible: false,
-    custom: true,
-  },
-  {
-    label: "Integrasi API",
-    starter: false,
-    pro: false,
-    advance: true,
-    flexible: false,
-    custom: true,
-  },
-  {
-    label: "Dedicated support",
-    starter: false,
-    pro: false,
-    advance: true,
-    flexible: false,
-    custom: true,
-  },
+  { label: "Custom design oleh tim Storo", standard: true, custom: true },
+  { label: "Custom domain", standard: true, custom: true },
+  { label: "Payment gateway (Xendit & Midtrans)", standard: true, custom: true },
+  { label: "Ongkos kirim otomatis (Biteship)", standard: true, custom: true },
+  { label: "Dashboard lengkap", standard: true, custom: true },
+  { label: "Import produk dari Shopee", standard: true, custom: true },
+  { label: "Blog & SEO tools", standard: true, custom: true },
+  { label: "Promo & kode diskon", standard: true, custom: true },
+  { label: "Analitik penjualan", standard: true, custom: true },
+  { label: "Bespoke design (animations, layout custom)", standard: false, custom: true },
+  { label: "Multi-admin", standard: false, custom: true },
+  { label: "Integrasi API", standard: false, custom: true },
+  { label: "Dedicated support", standard: false, custom: true },
 ];
 
 const faqs = [
@@ -230,7 +136,7 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {plans.map((plan) => {
               const planFeatures = features.map((f) => ({
                 label: f.label,

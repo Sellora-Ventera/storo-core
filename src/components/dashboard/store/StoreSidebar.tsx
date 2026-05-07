@@ -29,6 +29,7 @@ import {
   Globe,
   User,
   HelpCircle,
+  Wallet,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,7 +82,10 @@ function getNavGroups(basePath: string): { label: string; items: NavItem[] }[] {
     },
     {
       label: "Lainnya",
-      items: [{ title: "Pengaturan", href: `${basePath}/settings`, icon: Settings }],
+      items: [
+        { title: "Wallet", href: `${basePath}/wallet`, icon: Wallet },
+        { title: "Pengaturan", href: `${basePath}/settings`, icon: Settings },
+      ],
     },
     {
       label: "Akun",

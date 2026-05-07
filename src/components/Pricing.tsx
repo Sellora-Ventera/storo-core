@@ -7,12 +7,11 @@ import { PLANS, formatIDR } from "@/lib/plans";
 import DownloadCatalog from "./DownloadCatalog";
 
 const planDescriptions: Record<string, string> = {
-  starter: "Untuk bisnis yang baru mulai",
-  pro: "Paling populer untuk seller aktif",
-  advance: "Untuk seller dengan volume tinggi",
-  flexible: "Domain & hosting customer sendiri",
-  custom: "Solusi khusus sesuai kebutuhan",
+  standard: "Custom design oleh tim Storo, fitur lengkap",
+  custom: "Bespoke design + integrasi API + dedicated support",
 };
+
+const ACTIVE_PLANS = PLANS.filter((p) => p.isActive);
 
 const Pricing = () => {
   return (
@@ -27,8 +26,8 @@ const Pricing = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8 max-w-7xl mx-auto pt-6">
-          {PLANS.map((pkg) => {
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto pt-6">
+          {ACTIVE_PLANS.map((pkg) => {
             const priceLabel =
               pkg.setup !== null ? formatIDR(pkg.setup) : "Custom Price";
             const monthlyLabel =

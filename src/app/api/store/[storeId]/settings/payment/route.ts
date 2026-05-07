@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { authorizeStoreApi } from "@/lib/store/context";
 
+const ALLOWED_BILLING_MODELS = ["storo_gateway", "own_prepaid"] as const;
+type BillingModel = (typeof ALLOWED_BILLING_MODELS)[number];
+
 export async function PUT(
   request: Request,
   context: { params: Promise<{ storeId: string }> }
@@ -10,7 +13,16 @@ export async function PUT(
   if (auth instanceof NextResponse) return auth;
 
   const body = await request.json();
+  const billingModel = body.billing_model as BillingModel | undefined;
 
+  if (!billingModel || !ALLOWED_BILLING_MODELS.includes(billingModel)) {
+    return NextResponse.json(
+      { error: "Invalid billing_model. Must be 'storo_gateway' or 'own_prepaid'." },
+      { status: 400 }
+    );
+  }
+
+  // Read existing settings (preserve other keys, update payment block)
   const { data: store, error: fetchErr } = await auth.service
     .from("stores")
     .select("settings")
@@ -23,7 +35,6 @@ export async function PUT(
       ? { ...(store.settings as Record<string, unknown>) }
       : {};
   settings.payment = {
-    use_storo_gateway: body.use_storo_gateway ?? true,
     xendit_secret_key: body.xendit_secret_key ?? "",
     xendit_public_key: body.xendit_public_key ?? "",
     midtrans_server_key: body.midtrans_server_key ?? "",
@@ -32,7 +43,7 @@ export async function PUT(
 
   const { data, error } = await auth.service
     .from("stores")
-    .update({ settings })
+    .update({ billing_model: billingModel, settings })
     .eq("id", storeId)
     .select()
     .single();

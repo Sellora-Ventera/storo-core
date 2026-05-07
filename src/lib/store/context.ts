@@ -5,6 +5,8 @@ import {
 } from "@/lib/supabase/server";
 import type { StoreSummary } from "@/components/dashboard/store/StoreSwitcher";
 
+export type BillingModel = "storo_gateway" | "own_prepaid";
+
 export type StoreRow = {
   id: string;
   name: string;
@@ -16,6 +18,9 @@ export type StoreRow = {
   user_id: string | null;
   is_active: boolean;
   settings: Record<string, unknown> | null;
+  billing_model: BillingModel;
+  template_variant: string;
+  theme_config: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };
@@ -67,7 +72,7 @@ export async function getStoreForUser(storeId: string): Promise<{
   const { data: store } = await service
     .from("stores")
     .select(
-      "id, name, slug, description, logo_url, banner_url, client_id, user_id, is_active, settings, created_at, updated_at"
+      "id, name, slug, description, logo_url, banner_url, client_id, user_id, is_active, settings, billing_model, template_variant, theme_config, created_at, updated_at"
     )
     .eq("id", storeId)
     .eq("client_id", client.id)

@@ -1,7 +1,20 @@
-// ── Single source of truth for Storo.id plan data ───────────────────────
-// Imported by: pricing page, onboarding wizard, checkout API route
+// ── Single source of truth for Storo plan data (V3) ─────────────────────
+// Mirrors `plans` table in Supabase. Static for sync access during MVP;
+// can be refactored to DB loader in future without changing consumer API.
+//
+// V3 active plans: standard + custom
+// Legacy plans: starter, pro, advance, flexible (grandfathered, hidden from wizard)
 
-export type PlanId = "starter" | "pro" | "advance" | "flexible" | "custom";
+export type PlanId =
+  | "standard"
+  | "custom"
+  // legacy
+  | "starter"
+  | "pro"
+  | "advance"
+  | "flexible";
+
+export type BillingModel = "storo_gateway" | "own_prepaid";
 
 export interface Plan {
   id: PlanId;
@@ -12,76 +25,33 @@ export interface Plan {
   popular?: boolean;
   enterprise?: boolean;
   features: string[];
+  /** false = legacy plan, hidden from new onboarding wizard */
+  isActive: boolean;
+  /** true = grandfathered, kept for existing customers' billing display */
+  isLegacy: boolean;
+  /** allowed billing models for this plan */
+  allowedBillingModels: BillingModel[];
 }
 
 export const PLANS: Plan[] = [
   {
-    id: "starter",
-    name: "Starter",
-    setup: 1500000,
-    monthly: 250000,
+    id: "standard",
+    name: "Standard",
+    setup: 5_000_000,
+    monthly: 750_000,
+    isActive: true,
+    isLegacy: false,
+    allowedBillingModels: ["storo_gateway", "own_prepaid"],
     features: [
-      "Import produk dari Shopee",
+      "Custom design (template-inspired)",
       "Custom domain",
-      "Payment gateway (Xendit)",
+      "Payment gateway (Xendit & Midtrans)",
       "Ongkos kirim otomatis (Biteship)",
-      "Dashboard dasar",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    setup: 3500000,
-    monthly: 500000,
-    popular: true,
-    features: [
-      "Import produk dari Shopee",
-      "Custom domain",
-      "Payment gateway (Xendit)",
-      "Ongkos kirim otomatis (Biteship)",
-      "Dashboard dasar",
+      "Dashboard lengkap",
       "Blog & SEO tools",
       "Promo & kode diskon",
       "Analitik penjualan",
-      "Prioritas support",
-    ],
-  },
-  {
-    id: "advance",
-    name: "Advance",
-    setup: 7500000,
-    monthly: 1000000,
-    features: [
       "Import produk dari Shopee",
-      "Custom domain",
-      "Payment gateway (Xendit)",
-      "Ongkos kirim otomatis (Biteship)",
-      "Dashboard dasar",
-      "Blog & SEO tools",
-      "Promo & kode diskon",
-      "Analitik penjualan",
-      "Prioritas support",
-      "Multi-admin",
-      "Custom theme/design",
-      "Integrasi API",
-      "Dedicated support",
-    ],
-  },
-  {
-    id: "flexible",
-    name: "Flexible",
-    setup: 5000000,
-    monthly: 750000,
-    features: [
-      "Import produk dari Shopee",
-      "Custom domain",
-      "Payment gateway (Xendit)",
-      "Ongkos kirim otomatis (Biteship)",
-      "Dashboard dasar",
-      "Blog & SEO tools",
-      "Promo & kode diskon",
-      "Analitik penjualan",
-      "Prioritas support",
     ],
   },
   {
@@ -91,26 +61,75 @@ export const PLANS: Plan[] = [
     monthly: null,
     monthlyLabel: "Hubungi Kami",
     enterprise: true,
+    isActive: true,
+    isLegacy: false,
+    allowedBillingModels: ["storo_gateway", "own_prepaid"],
     features: [
-      "Import produk dari Shopee",
+      "Bespoke design (animations, layout custom)",
       "Custom domain",
-      "Payment gateway (Xendit)",
+      "Payment gateway (Xendit & Midtrans)",
       "Ongkos kirim otomatis (Biteship)",
-      "Dashboard dasar",
+      "Dashboard lengkap",
       "Blog & SEO tools",
       "Promo & kode diskon",
       "Analitik penjualan",
-      "Prioritas support",
+      "Import produk dari Shopee",
       "Multi-admin",
-      "Custom theme/design",
       "Integrasi API",
       "Dedicated support",
     ],
+  },
+  // ── Legacy plans (hidden from wizard, kept for existing customer billing) ──
+  {
+    id: "starter",
+    name: "Starter (Legacy)",
+    setup: 1_500_000,
+    monthly: 250_000,
+    isActive: false,
+    isLegacy: true,
+    allowedBillingModels: ["storo_gateway"],
+    features: ["Legacy plan"],
+  },
+  {
+    id: "pro",
+    name: "Pro (Legacy)",
+    setup: 3_500_000,
+    monthly: 500_000,
+    popular: true,
+    isActive: false,
+    isLegacy: true,
+    allowedBillingModels: ["storo_gateway"],
+    features: ["Legacy plan"],
+  },
+  {
+    id: "advance",
+    name: "Advance (Legacy)",
+    setup: 7_500_000,
+    monthly: 1_000_000,
+    isActive: false,
+    isLegacy: true,
+    allowedBillingModels: ["storo_gateway"],
+    features: ["Legacy plan"],
+  },
+  {
+    id: "flexible",
+    name: "Flexible (Legacy)",
+    setup: 5_000_000,
+    monthly: 750_000,
+    isActive: false,
+    isLegacy: true,
+    allowedBillingModels: ["storo_gateway"],
+    features: ["Legacy plan"],
   },
 ];
 
 export function getPlan(id: string): Plan | undefined {
   return PLANS.find((p) => p.id === id);
+}
+
+/** Plans visible in onboarding wizard / pricing page (active, non-legacy) */
+export function getActivePlans(): Plan[] {
+  return PLANS.filter((p) => p.isActive);
 }
 
 export function formatIDR(amount: number): string {

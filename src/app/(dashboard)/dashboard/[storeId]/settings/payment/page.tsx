@@ -43,7 +43,7 @@ export default async function PaymentSettingsPage({
       <PaymentSettingsForm
         storeId={storeId}
         initial={{
-          use_storo_gateway: payment.use_storo_gateway !== false,
+          billing_model: store.billing_model,
           xendit_secret_key: (payment.xendit_secret_key as string) ?? "",
           xendit_public_key: (payment.xendit_public_key as string) ?? "",
           midtrans_server_key: (payment.midtrans_server_key as string) ?? "",
