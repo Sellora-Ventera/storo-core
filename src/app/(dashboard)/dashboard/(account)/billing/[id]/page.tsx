@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -63,7 +63,7 @@ export default function InvoiceDetailPage() {
   const [paying, setPaying] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const supabase = createClient();
     const { data: inv } = await supabase
       .from("invoices").select("*").eq("id", id).single();
@@ -74,9 +74,9 @@ export default function InvoiceDetailPage() {
       .from("clients").select("full_name, shopee_store_name").eq("id", inv.client_id).single();
     if (cl) setClient(cl);
     setLoading(false);
-  };
+  }, [id, router]);
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); }, [load]);
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

@@ -25,7 +25,10 @@ import {
   X,
   ChevronsUpDown,
   LogOut,
-  ArrowLeft,
+  Receipt,
+  Globe,
+  User,
+  HelpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -79,6 +82,16 @@ function getNavGroups(basePath: string): { label: string; items: NavItem[] }[] {
     {
       label: "Lainnya",
       items: [{ title: "Pengaturan", href: `${basePath}/settings`, icon: Settings }],
+    },
+    {
+      label: "Akun",
+      items: [
+        { title: "Tagihan", href: "/dashboard/billing", icon: Receipt },
+        { title: "Domain", href: "/dashboard/domains", icon: Globe },
+        { title: "Profil", href: "/dashboard/profile", icon: User },
+        { title: "Referral", href: "/dashboard/referral", icon: Gift },
+        { title: "Bantuan", href: "/dashboard/help", icon: HelpCircle },
+      ],
     },
   ];
 }
@@ -140,16 +153,8 @@ function SidebarBody({
 
   return (
     <div className="h-full flex flex-col bg-white">
-      <div className="px-3 pt-4 pb-3 border-b border-[#E5E8EF] space-y-2.5">
+      <div className="px-3 pt-4 pb-3 border-b border-[#E5E8EF]">
         <StoreSwitcher currentStoreId={storeId} stores={stores} />
-        <Link
-          href="/dashboard"
-          onClick={onItemClick}
-          className="flex items-center gap-1.5 text-xs text-[#64748B] hover:text-primary transition px-2 cursor-pointer"
-        >
-          <ArrowLeft className="size-3" />
-          Kembali ke Akun
-        </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">

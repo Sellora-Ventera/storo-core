@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Check, ChevronsUpDown, Plus, ArrowLeft, Store as StoreIcon } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Store as StoreIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,12 +93,6 @@ export default function StoreSwitcher({
           <Link href="/dashboard/stores/new">
             <Plus className="mr-2 size-4" />
             Tambah Toko Baru
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/dashboard">
-            <ArrowLeft className="mr-2 size-4" />
-            Kembali ke Akun
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -10,6 +10,7 @@ import {
   ExternalLink,
   MessageCircle,
   AlertTriangle,
+  AlertCircle,
   Store,
   Globe,
   Calendar,
@@ -17,8 +18,6 @@ import {
   UserCog,
   Upload,
   MessageSquare,
-  Loader2,
-  AlertCircle,
   FileText,
   Download,
   Receipt,
@@ -27,61 +26,7 @@ import {
 } from "lucide-react";
 import { PLANS } from "@/lib/plans";
 import { StoreEditDialog } from "@/components/dashboard/StoreEditDialog";
-
-type StatusKey = "pending" | "reviewing" | "in_progress" | "live" | "rejected";
-
-const STATUS_CONFIG: Record<
-  StatusKey,
-  {
-    label: string;
-    color: string;
-    icon: typeof Clock;
-    spin: boolean;
-    description: string;
-    eta: string;
-  }
-> = {
-  pending: {
-    label: "Menunggu Konfirmasi",
-    color: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    icon: Clock,
-    spin: false,
-    description: "Data onboarding Anda sudah kami terima. Tim kami akan segera menghubungi Anda.",
-    eta: "Estimasi review: 1-2 jam kerja",
-  },
-  reviewing: {
-    label: "Sedang Direview",
-    color: "bg-blue-100 text-blue-700 border-blue-200",
-    icon: Loader2,
-    spin: true,
-    description: "Tim VenteraAI sedang memeriksa data toko & produk Anda dari Shopee.",
-    eta: "Estimasi: 1-2 hari kerja",
-  },
-  in_progress: {
-    label: "Dalam Proses Setup",
-    color: "bg-orange-100 text-orange-700 border-orange-200",
-    icon: Loader2,
-    spin: true,
-    description: "Engineer kami sedang menyiapkan toko, template, & import produk Anda.",
-    eta: "Estimasi: 2-3 hari kerja",
-  },
-  live: {
-    label: "Toko Aktif",
-    color: "bg-green-100 text-green-700 border-green-200",
-    icon: CheckCircle2,
-    spin: false,
-    description: "Toko Anda sudah aktif & siap menerima pesanan!",
-    eta: "",
-  },
-  rejected: {
-    label: "Perlu Perbaikan Data",
-    color: "bg-red-100 text-red-700 border-red-200",
-    icon: AlertCircle,
-    spin: false,
-    description: "Ada data yang perlu diperbaiki. Silakan hubungi tim kami.",
-    eta: "",
-  },
-};
+import { STATUS_CONFIG, getStepIndex, type StatusKey } from "@/lib/store-status";
 
 const TIMELINE_STEPS = [
   { key: "pending", label: "Permintaan Diterima", description: "Data onboarding Anda telah kami terima." },
@@ -89,14 +34,6 @@ const TIMELINE_STEPS = [
   { key: "in_progress", label: "Setup Toko", description: "Toko Anda sedang dalam proses pembuatan." },
   { key: "live", label: "Toko Aktif", description: "Toko Anda sudah live dan siap digunakan!" },
 ] as const;
-
-const STATUS_ORDER = ["pending", "reviewing", "in_progress", "live"] as const;
-
-function getCompletedIndex(status: string): number {
-  if (status === "rejected") return 1;
-  const idx = STATUS_ORDER.indexOf(status as (typeof STATUS_ORDER)[number]);
-  return idx === -1 ? 0 : idx;
-}
 
 const PLAN_NAME_MAP = Object.fromEntries(PLANS.map((p) => [p.id, p.name]));
 const PLAN_SETUP_MAP = Object.fromEntries(PLANS.map((p) => [p.id, p.setup]));
@@ -146,30 +83,31 @@ export default async function StoreDetailPage({
 
   if (!client) redirect("/sign-in");
 
-  const { data: store } = await supabase
-    .from("onboarding_requests")
-    .select(
-      "id, status, store_url, plan, template_name, template_id, store_name, created_at, live_at, updated_at, requested_slug, custom_domain, status_note, assigned_engineer, files_uploaded, upload_method, client_id, store_id"
-    )
-    .eq("id", id)
-    .eq("client_id", client.id)
-    .single();
+  const [{ data: store }, { data: invoice }] = await Promise.all([
+    supabase
+      .from("onboarding_requests")
+      .select(
+        "id, status, store_url, plan, template_name, template_id, store_name, created_at, live_at, updated_at, requested_slug, custom_domain, status_note, assigned_engineer, files_uploaded, upload_method, client_id, store_id"
+      )
+      .eq("id", id)
+      .eq("client_id", client.id)
+      .single(),
+    supabase
+      .from("invoices")
+      .select("id, amount, status, paid_at, invoice_url, type, provider, due_date, created_at")
+      .eq("client_id", client.id)
+      .eq("type", "setup")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (!store) notFound();
-
-  const { data: invoice } = await supabase
-    .from("invoices")
-    .select("id, amount, status, paid_at, invoice_url, type, provider, due_date, created_at")
-    .eq("client_id", client.id)
-    .eq("type", "setup")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
   const status = (store.status as StatusKey) ?? "pending";
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
-  const completedIndex = getCompletedIndex(status);
+  const completedIndex = getStepIndex(status);
 
   const planName = PLAN_NAME_MAP[store.plan] ?? store.plan ?? "—";
   const planSetup = PLAN_SETUP_MAP[store.plan] ?? null;

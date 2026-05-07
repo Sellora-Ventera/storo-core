@@ -4,10 +4,7 @@ import {
   Store,
   Package,
   ShoppingBag,
-  Clock,
   CheckCircle2,
-  AlertCircle,
-  Loader2Icon,
   Globe,
   Calendar,
   ArrowRight,
@@ -16,52 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-const STATUS_CONFIG = {
-  pending: {
-    label: "Menunggu Konfirmasi",
-    color: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    icon: Clock,
-    description: "Data onboarding Anda sudah kami terima. Tim kami akan segera menghubungi Anda.",
-    eta: "Estimasi review: 1-2 jam kerja",
-  },
-  reviewing: {
-    label: "Sedang Direview",
-    color: "bg-blue-100 text-blue-700 border-blue-200",
-    icon: Loader2Icon,
-    description: "Tim VenteraAI sedang memeriksa data toko & produk Anda dari Shopee.",
-    eta: "Estimasi: 1-2 hari kerja",
-  },
-  in_progress: {
-    label: "Dalam Proses Setup",
-    color: "bg-orange-100 text-orange-700 border-orange-200",
-    icon: Loader2Icon,
-    description: "Engineer kami sedang menyiapkan toko, template, & import produk Anda.",
-    eta: "Estimasi: 2-3 hari kerja",
-  },
-  live: {
-    label: "Toko Aktif",
-    color: "bg-green-100 text-green-700 border-green-200",
-    icon: CheckCircle2,
-    description: "Toko Anda sudah aktif & siap menerima pesanan!",
-    eta: "",
-  },
-  rejected: {
-    label: "Perlu Perbaikan Data",
-    color: "bg-red-100 text-red-700 border-red-200",
-    icon: AlertCircle,
-    description: "Ada data yang perlu diperbaiki. Silakan hubungi tim kami.",
-    eta: "",
-  },
-} as const;
-
-const PROGRESS_STEPS = ["pending", "reviewing", "in_progress", "live"] as const;
-
-function getStepIndex(status: string): number {
-  if (status === "rejected") return 1;
-  const idx = PROGRESS_STEPS.indexOf(status as (typeof PROGRESS_STEPS)[number]);
-  return idx === -1 ? 0 : idx;
-}
+import { STATUS_CONFIG, PROGRESS_STEPS, getStepIndex, type StatusKey } from "@/lib/store-status";
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -92,25 +44,24 @@ export default async function DashboardPage() {
     }
   }
 
-  // Fetch onboarding requests (stores)
-  const { data: requests } = client
-    ? await supabase
-        .from("onboarding_requests")
-        .select("id, status, store_url, plan, template_name, store_id, created_at, requested_slug, custom_domain, status_note")
-        .eq("client_id", client.id)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  // Fetch notifications (only "live" status ones per spec)
-  const { data: notifications } = client
-    ? await supabase
-        .from("client_notifications")
-        .select("id, title, message, type, created_at, is_read")
-        .eq("client_id", client.id)
-        .eq("is_read", false)
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] };
+  const [{ data: requests }, { data: notifications }] = await Promise.all([
+    client
+      ? supabase
+          .from("onboarding_requests")
+          .select("id, status, store_url, plan, template_name, store_id, created_at, requested_slug, custom_domain, status_note")
+          .eq("client_id", client.id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    client
+      ? supabase
+          .from("client_notifications")
+          .select("id, title, message, type, created_at, is_read")
+          .eq("client_id", client.id)
+          .eq("is_read", false)
+          .order("created_at", { ascending: false })
+          .limit(5)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? "Kamu";
   const liveStores = requests?.filter((r) => r.status === "live") ?? [];
@@ -172,7 +123,7 @@ export default async function DashboardPage() {
             Status Onboarding
           </h2>
           {pendingStores.map((req) => {
-            const status = (req.status as keyof typeof STATUS_CONFIG) ?? "pending";
+            const status = (req.status as StatusKey) ?? "pending";
             const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
             const Icon = config.icon;
             const stepIndex = getStepIndex(status);
@@ -218,7 +169,7 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border flex-shrink-0 ${config.color}`}>
-                    <Icon className={`w-3.5 h-3.5 ${status === "reviewing" || status === "in_progress" ? "animate-spin" : ""}`} />
+                    <Icon className={`w-3.5 h-3.5 ${config.spin ? "animate-spin" : ""}`} />
                     {config.label}
                   </span>
                 </div>
