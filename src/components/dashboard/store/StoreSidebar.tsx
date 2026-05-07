@@ -30,6 +30,7 @@ import {
   User,
   HelpCircle,
   Wallet,
+  ChevronDown,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import {
@@ -157,37 +158,77 @@ function SidebarBody({
     .slice(0, 2)
     .toUpperCase();
 
+  // Auto-open the group that contains the active route
+  const [openGroup, setOpenGroup] = useState<string>(() => {
+    const active = navGroups.find((g) =>
+      g.items.some((item) =>
+        item.exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(item.href + "/")
+      )
+    );
+    return active?.label ?? navGroups[0].label;
+  });
+
+  // Re-sync when pathname changes (e.g. programmatic navigation)
+  useEffect(() => {
+    const active = navGroups.find((g) =>
+      g.items.some((item) =>
+        item.exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(item.href + "/")
+      )
+    );
+    if (active) setOpenGroup(active.label);
+  // navGroups is derived from basePath which is stable per render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
     <div className="h-full flex flex-col bg-white">
       <div className="px-3 pt-4 pb-3 border-b border-[#E5E8EF]">
         <StoreSwitcher currentStoreId={storeId} stores={stores} />
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-        {navGroups.map((group) => (
-          <div key={group.label}>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#94A3B8] font-semibold mb-1.5 px-3">
-              {group.label}
-            </p>
-            <ul className="space-y-0.5">
-              {group.items.map((item) =>
-                item.bell ? (
-                  <li key={item.href} className="flex items-center gap-2.5 px-3 py-1.5">
-                    <NotificationBell storeId={storeId} />
-                    <span className="text-sm text-[#64748B]">{item.title}</span>
-                  </li>
-                ) : (
-                  <li key={item.href}>
-                    <NavLink {...item} pathname={pathname} onClick={onItemClick} />
-                  </li>
-                )
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
+        {navGroups.map((group) => {
+          const isOpen = openGroup === group.label;
+          return (
+            <div key={group.label}>
+              <button
+                type="button"
+                onClick={() => setOpenGroup(isOpen ? "" : group.label)}
+                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-[#F8FAFC] transition cursor-pointer group"
+              >
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#94A3B8] font-semibold group-hover:text-[#64748B] transition">
+                  {group.label}
+                </span>
+                <ChevronDown
+                  className={`size-3.5 text-[#94A3B8] transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
+                />
+              </button>
+              {isOpen && (
+                <ul className="space-y-0.5 mt-0.5 mb-1">
+                  {group.items.map((item) =>
+                    item.bell ? (
+                      <li key={item.href} className="flex items-center gap-2.5 px-3 py-1.5">
+                        <NotificationBell storeId={storeId} />
+                        <span className="text-sm text-[#64748B]">{item.title}</span>
+                      </li>
+                    ) : (
+                      <li key={item.href}>
+                        <NavLink {...item} pathname={pathname} onClick={onItemClick} />
+                      </li>
+                    )
+                  )}
+                </ul>
               )}
-            </ul>
-          </div>
-        ))}
+            </div>
+          );
+        })}
 
         {storefrontUrl ? (
-          <div className="pt-3 border-t border-[#E5E8EF] mx-3">
+          <div className="pt-3 border-t border-[#E5E8EF] mx-0">
             <a
               href={storefrontUrl}
               target="_blank"
