@@ -16,6 +16,7 @@ export type StoreSummary = {
   id: string;
   name: string;
   slug: string | null;
+  custom_domain: string | null;
   is_active: boolean;
 };
 
@@ -29,6 +30,12 @@ export default function StoreSwitcher({
   const router = useRouter();
   const pathname = usePathname();
   const current = stores.find((s) => s.id === currentStoreId);
+  const suffix = process.env.NEXT_PUBLIC_STOREFRONT_DOMAIN_SUFFIX ?? "storo.id";
+  const storefrontHost = current?.custom_domain?.trim()
+    ? current.custom_domain.trim()
+    : current?.slug
+    ? `${current.slug}.${suffix}`
+    : null;
 
   const switchTo = (newStoreId: string) => {
     if (newStoreId === currentStoreId) return;
@@ -53,6 +60,11 @@ export default function StoreSwitcher({
             <span className="block text-sm font-medium text-[#0F172A] truncate">
               {current?.name ?? "—"}
             </span>
+            {storefrontHost && (
+              <span className="block text-[10px] text-[#94A3B8] truncate">
+                {storefrontHost}
+              </span>
+            )}
           </span>
           <ChevronsUpDown className="size-4 text-[#94A3B8] shrink-0" />
         </button>

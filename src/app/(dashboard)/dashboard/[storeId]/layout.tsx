@@ -16,7 +16,7 @@ export default async function StoreDashboardLayout({
       <StoreSidebar
         storeId={store.id}
         stores={stores}
-        storefrontUrl={buildStorefrontUrl(store.slug)}
+        storefrontUrl={buildStorefrontUrl(store.slug, store.custom_domain)}
       />
       <main className="lg:pl-64">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -11,6 +11,7 @@ export type StoreRow = {
   id: string;
   name: string;
   slug: string | null;
+  custom_domain: string | null;
   description: string | null;
   logo_url: string | null;
   banner_url: string | null;
@@ -53,7 +54,7 @@ export async function getUserStores(clientId: string): Promise<StoreSummary[]> {
   const service = await createSupabaseServiceClient();
   const { data, error } = await service
     .from("stores")
-    .select("id, name, slug, is_active")
+    .select("id, name, slug, custom_domain, is_active")
     .eq("client_id", clientId)
     .order("created_at", { ascending: false });
 
@@ -72,7 +73,7 @@ export async function getStoreForUser(storeId: string): Promise<{
   const { data: store } = await service
     .from("stores")
     .select(
-      "id, name, slug, description, logo_url, banner_url, client_id, user_id, is_active, settings, billing_model, template_variant, theme_config, created_at, updated_at"
+      "id, name, slug, custom_domain, description, logo_url, banner_url, client_id, user_id, is_active, settings, billing_model, template_variant, theme_config, created_at, updated_at"
     )
     .eq("id", storeId)
     .eq("client_id", client.id)
@@ -89,7 +90,11 @@ export async function getStoreForUser(storeId: string): Promise<{
   };
 }
 
-export function buildStorefrontUrl(slug: string | null | undefined): string | null {
+export function buildStorefrontUrl(
+  slug: string | null | undefined,
+  customDomain?: string | null
+): string | null {
+  if (customDomain?.trim()) return `https://${customDomain.trim()}`;
   if (!slug) return null;
   const suffix = process.env.NEXT_PUBLIC_STOREFRONT_DOMAIN_SUFFIX ?? "storo.id";
   return `https://${slug}.${suffix}`;
