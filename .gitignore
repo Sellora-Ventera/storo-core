@@ -38,3 +38,4 @@ supabase/.temp/
 
 # typescript build info
 *.tsbuildinfo
+.vercel
