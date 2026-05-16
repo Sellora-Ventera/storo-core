@@ -2,11 +2,13 @@
 // Mirrors `plans` table in Supabase. Static for sync access during MVP;
 // can be refactored to DB loader in future without changing consumer API.
 //
-// V3 active plans: standard + custom
+// V3 active plans: basic + standard + business + custom
 // Legacy plans: starter, pro, advance, flexible (grandfathered, hidden from wizard)
 
 export type PlanId =
+  | "basic"
   | "standard"
+  | "business"
   | "custom"
   // legacy
   | "starter"
@@ -35,10 +37,30 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
+    id: "basic",
+    name: "Basic",
+    setup: 1_000_000,
+    monthly: 150_000,
+    isActive: true,
+    isLegacy: false,
+    allowedBillingModels: ["storo_gateway", "own_prepaid"],
+    features: [
+      "Template-inspired design (5 pilihan)",
+      "Subdomain *.storo.id (custom domain add-on)",
+      "Sampai 100 produk",
+      "Payment gateway (Xendit)",
+      "Ongkos kirim Biteship (3 kurir utama)",
+      "Dashboard standar + analitik dasar",
+      "Promo & kode diskon",
+      "Email support (response 2x24 jam)",
+    ],
+  },
+  {
     id: "standard",
     name: "Standard",
-    setup: 5_000_000,
-    monthly: 750_000,
+    setup: 2_500_000,
+    monthly: 350_000,
+    popular: true,
     isActive: true,
     isLegacy: false,
     allowedBillingModels: ["storo_gateway", "own_prepaid"],
@@ -55,6 +77,27 @@ export const PLANS: Plan[] = [
     ],
   },
   {
+    id: "business",
+    name: "Business",
+    setup: 5_000_000,
+    monthly: 750_000,
+    isActive: true,
+    isLegacy: false,
+    allowedBillingModels: ["storo_gateway", "own_prepaid"],
+    features: [
+      "Semua fitur Standard",
+      "Loyalty points & membership tiers",
+      "Reviews moderation & free shipping rules",
+      "Multi-admin (sampai 10 user, role-based)",
+      "Multi-toko (cabang/sub-brand, 1 billing)",
+      "API access + custom webhook",
+      "Onboarding & training 1-on-1 (2 sesi)",
+      "Dedicated account manager",
+      "SLA 99.9% uptime",
+      "Backup mingguan",
+    ],
+  },
+  {
     id: "custom",
     name: "Custom",
     setup: null,
@@ -65,18 +108,12 @@ export const PLANS: Plan[] = [
     isLegacy: false,
     allowedBillingModels: ["storo_gateway", "own_prepaid"],
     features: [
-      "Bespoke design (animations, layout custom)",
-      "Custom domain",
-      "Payment gateway (Xendit & Midtrans)",
-      "Ongkos kirim otomatis (Biteship)",
-      "Dashboard lengkap",
-      "Blog & SEO tools",
-      "Promo & kode diskon",
-      "Analitik penjualan",
-      "Import produk dari Shopee",
-      "Multi-admin",
-      "Integrasi API",
-      "Dedicated support",
+      "Semua fitur Business",
+      "Bespoke design (animations, layout 100% custom)",
+      "Integrasi API custom (ERP/POS/CRM/marketplace)",
+      "White-label option",
+      "Dedicated infra / region",
+      "24/7 support + on-call engineer",
     ],
   },
   // ── Legacy plans (hidden from wizard, kept for existing customer billing) ──

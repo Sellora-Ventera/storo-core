@@ -44,24 +44,32 @@ const plans: PricingPlan[] = PLANS.filter((p) => p.isActive).map((p) => ({
 
 interface Feature {
   label: string;
+  basic: boolean;
   standard: boolean;
+  business: boolean;
   custom: boolean;
 }
 
 const features: Feature[] = [
-  { label: "Custom design oleh tim Storo", standard: true, custom: true },
-  { label: "Custom domain", standard: true, custom: true },
-  { label: "Payment gateway (Xendit & Midtrans)", standard: true, custom: true },
-  { label: "Ongkos kirim otomatis (Biteship)", standard: true, custom: true },
-  { label: "Dashboard lengkap", standard: true, custom: true },
-  { label: "Import produk dari Shopee", standard: true, custom: true },
-  { label: "Blog & SEO tools", standard: true, custom: true },
-  { label: "Promo & kode diskon", standard: true, custom: true },
-  { label: "Analitik penjualan", standard: true, custom: true },
-  { label: "Bespoke design (animations, layout custom)", standard: false, custom: true },
-  { label: "Multi-admin", standard: false, custom: true },
-  { label: "Integrasi API", standard: false, custom: true },
-  { label: "Dedicated support", standard: false, custom: true },
+  { label: "Template-inspired design",                   basic: true,  standard: true,  business: true,  custom: true },
+  { label: "Custom domain",                              basic: false, standard: true,  business: true,  custom: true },
+  { label: "Payment gateway (Xendit & Midtrans)",        basic: false, standard: true,  business: true,  custom: true },
+  { label: "Ongkos kirim otomatis (Biteship lengkap)",   basic: false, standard: true,  business: true,  custom: true },
+  { label: "Dashboard lengkap",                          basic: false, standard: true,  business: true,  custom: true },
+  { label: "Import produk dari Shopee",                  basic: false, standard: true,  business: true,  custom: true },
+  { label: "Blog & SEO tools",                           basic: false, standard: true,  business: true,  custom: true },
+  { label: "Promo & kode diskon",                        basic: true,  standard: true,  business: true,  custom: true },
+  { label: "Analitik penjualan",                         basic: false, standard: true,  business: true,  custom: true },
+  { label: "Loyalty & membership tiers",                 basic: false, standard: false, business: true,  custom: true },
+  { label: "Reviews moderation & free shipping rules",   basic: false, standard: false, business: true,  custom: true },
+  { label: "Multi-admin (role-based)",                   basic: false, standard: false, business: true,  custom: true },
+  { label: "Multi-toko (cabang/sub-brand)",              basic: false, standard: false, business: true,  custom: true },
+  { label: "API access + custom webhook",                basic: false, standard: false, business: true,  custom: true },
+  { label: "Dedicated account manager",                  basic: false, standard: false, business: true,  custom: true },
+  { label: "SLA 99.9% uptime",                           basic: false, standard: false, business: true,  custom: true },
+  { label: "Bespoke design (animations, layout custom)", basic: false, standard: false, business: false, custom: true },
+  { label: "Integrasi API custom (ERP/POS/CRM)",         basic: false, standard: false, business: false, custom: true },
+  { label: "White-label option",                         basic: false, standard: false, business: false, custom: true },
 ];
 
 const faqs = [
@@ -136,7 +144,7 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {plans.map((plan) => {
               const planFeatures = features.map((f) => ({
                 label: f.label,

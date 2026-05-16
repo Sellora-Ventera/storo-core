@@ -18,7 +18,7 @@ import {
   CreditCard,
   MessageCircle,
 } from "lucide-react";
-import { PLANS, getPlan, formatIDR, type PlanId } from "@/lib/plans";
+import { getActivePlans, getPlan, formatIDR, type PlanId } from "@/lib/plans";
 
 type Step = 1 | 2 | 3;
 
@@ -173,13 +173,12 @@ function Step1Plan({
   onNext: () => void;
 }) {
   const [error, setError] = useState("");
-  const selectablePlans = PLANS.filter((p) => p.setup !== null);
+  const selectablePlans = getActivePlans().filter((p) => p.setup !== null);
 
   const planDescriptions: Record<string, string> = {
-    starter: "Untuk bisnis yang baru mulai",
-    pro: "Paling populer untuk seller aktif",
-    advance: "Untuk seller dengan volume tinggi",
-    flexible: "Domain & hosting customer sendiri",
+    basic: "Untuk seller yang baru mulai jualan online",
+    standard: "Untuk seller aktif yang siap scale",
+    business: "Untuk brand established dengan tim & volume tinggi",
   };
 
   const handleNext = () => {
@@ -202,7 +201,7 @@ function Step1Plan({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 pt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-4 max-w-5xl mx-auto">
         {selectablePlans.map((p) => {
           const isSelected = plan === p.id;
           return (

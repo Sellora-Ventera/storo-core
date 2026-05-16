@@ -5,7 +5,26 @@ const PROTECTED_PREFIXES = ["/dashboard", "/superadmin"];
 const AUTH_PAGES = ["/sign-in", "/sign-up"];
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // OAuth code forwarder. Supabase Auth sometimes redirects back to the Site URL
+  // (https://storo.id/?code=...) instead of the redirectTo we pass — happens
+  // when /auth/callback isn't in the "Redirect URLs" allowlist. Forward to the
+  // callback route so the code gets exchanged for a session.
+  const code = searchParams.get("code");
+  if (
+    code &&
+    !pathname.startsWith("/auth/callback") &&
+    !pathname.startsWith("/api/auth/callback") &&
+    !pathname.startsWith("/payment/") // payment/* uses its own ?code-like params
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    if (!url.searchParams.get("next")) {
+      url.searchParams.set("next", "/dashboard");
+    }
+    return NextResponse.redirect(url);
+  }
 
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
   const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
