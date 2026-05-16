@@ -18,9 +18,6 @@ import {
   Crown,
   Star,
   ExternalLink,
-  Bell,
-  MessageCircle,
-  Mail,
   Menu,
   X,
   ChevronsUpDown,
@@ -31,6 +28,7 @@ import {
   HelpCircle,
   Wallet,
   ChevronDown,
+  ArrowLeft,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -74,17 +72,6 @@ function getNavGroups(basePath: string): { label: string; items: NavItem[] }[] {
       ],
     },
     {
-      // Komunikasi sengaja account-level (cross-store) — agregasi pesan,
-      // notifikasi, leads dari SEMUA toko milik client. Tiap item ditandai
-      // badge nama toko di halaman tersebut.
-      label: "Komunikasi",
-      items: [
-        { title: "Pesan", href: "/dashboard/messages", icon: MessageCircle },
-        { title: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
-        { title: "Leads", href: "/dashboard/leads", icon: Mail },
-      ],
-    },
-    {
       label: "Lainnya",
       items: [
         { title: "Wallet", href: `${basePath}/wallet`, icon: Wallet },
@@ -112,9 +99,10 @@ function NavLink({
   pathname,
   onClick,
 }: NavItem & { pathname: string; onClick?: () => void }) {
+  const hrefBase = href.split("?")[0];
   const active = exact
-    ? pathname === href
-    : pathname === href || pathname.startsWith(href + "/");
+    ? pathname === hrefBase
+    : pathname === hrefBase || pathname.startsWith(hrefBase + "/");
   return (
     <Link
       href={href}
@@ -150,7 +138,7 @@ function SidebarBody({
   userName: string | null;
   onLogout: () => void;
 }) {
-  const basePath = `/dashboard/${storeId}`;
+  const basePath = `/dashboard/manage-store/${storeId}`;
   const navGroups = getNavGroups(basePath);
   const initials = (userName ?? userEmail ?? "U")
     .split(" ")
@@ -159,27 +147,22 @@ function SidebarBody({
     .slice(0, 2)
     .toUpperCase();
 
+  const isItemActive = (item: NavItem) => {
+    const base = item.href.split("?")[0];
+    return item.exact
+      ? pathname === base
+      : pathname === base || pathname.startsWith(base + "/");
+  };
+
   // Auto-open the group that contains the active route
   const [openGroup, setOpenGroup] = useState<string>(() => {
-    const active = navGroups.find((g) =>
-      g.items.some((item) =>
-        item.exact
-          ? pathname === item.href
-          : pathname === item.href || pathname.startsWith(item.href + "/")
-      )
-    );
+    const active = navGroups.find((g) => g.items.some(isItemActive));
     return active?.label ?? navGroups[0].label;
   });
 
   // Re-sync when pathname changes (e.g. programmatic navigation)
   useEffect(() => {
-    const active = navGroups.find((g) =>
-      g.items.some((item) =>
-        item.exact
-          ? pathname === item.href
-          : pathname === item.href || pathname.startsWith(item.href + "/")
-      )
-    );
+    const active = navGroups.find((g) => g.items.some(isItemActive));
     if (active) setOpenGroup(active.label);
   // navGroups is derived from basePath which is stable per render
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -221,8 +204,16 @@ function SidebarBody({
           );
         })}
 
-        {storefrontUrl ? (
-          <div className="pt-3 border-t border-[#E5E8EF] mx-0">
+        <div className="pt-3 border-t border-[#E5E8EF] mx-0 space-y-0.5">
+          <Link
+            href="/dashboard"
+            onClick={onItemClick}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-full text-sm text-[#64748B] hover:bg-[#EEF2FA] hover:text-[#0F172A] transition cursor-pointer"
+          >
+            <ArrowLeft className="size-4 shrink-0" />
+            <span className="flex-1 truncate">Kembali ke Dashboard Utama</span>
+          </Link>
+          {storefrontUrl ? (
             <a
               href={storefrontUrl}
               target="_blank"
@@ -233,8 +224,8 @@ function SidebarBody({
               <ExternalLink className="size-4 shrink-0" />
               <span className="flex-1 truncate">Lihat Storefront</span>
             </a>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </nav>
 
       <div className="p-3 border-t border-[#E5E8EF]">
@@ -349,7 +340,7 @@ export default function StoreSidebar({
             {currentStore?.name ?? "Toko"}
           </span>
           <Link
-            href={`/dashboard/${storeId}/settings`}
+            href={`/dashboard/manage-store/${storeId}/settings`}
             aria-label="Pengaturan"
             className="size-11 rounded-full grid place-items-center cursor-pointer"
           >

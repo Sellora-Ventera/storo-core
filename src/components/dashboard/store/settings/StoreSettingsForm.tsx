@@ -196,7 +196,7 @@ export default function StoreSettingsForm({
           )}
         </button>
 
-        <ChipButton href={`/dashboard/${storeId}`} variant="default">
+        <ChipButton href={`/dashboard/manage-store/${storeId}`} variant="default">
           Kembali ke Dashboard
         </ChipButton>
       </div>

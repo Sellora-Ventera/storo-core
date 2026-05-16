@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Bell } from "lucide-react";
+import { Bell, ShoppingCart } from "lucide-react";
 import { requireUserAndClient, getUserStores } from "@/lib/store/context";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import {
@@ -12,22 +12,34 @@ import {
 } from "@/components/dashboard/store/ui";
 import NotificationActions from "@/components/dashboard/store/notifications/NotificationActions";
 import StoreBadge from "@/components/dashboard/account/StoreBadge";
+import StoreFilter from "@/components/dashboard/account/StoreFilter";
 
-export default async function AccountNotificationsPage() {
+export default async function AccountNotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ store?: string }>;
+}) {
   const { client } = await requireUserAndClient();
   const stores = await getUserStores(client.id);
-  const storeIds = stores.map((s) => s.id);
+  const allStoreIds = stores.map((s) => s.id);
   const storeById = new Map(stores.map((s) => [s.id, s]));
 
+  // Filter dari URL ?store=<id>. Validasi: hanya boleh toko milik client.
+  const params = await searchParams;
+  const selectedStore = params.store && storeById.has(params.store) ? params.store : null;
+  const storeIds = selectedStore ? [selectedStore] : allStoreIds;
+  const filteredStore = selectedStore ? storeById.get(selectedStore) : null;
+
+  // Source: store_notifications (storoengine schema). Order events, system events.
   const supabase = await createSupabaseServiceClient();
   const { data } = storeIds.length
     ? await supabase
-        .from("notifications")
-        .select("id, store_id, type, title, message, link, is_read, created_at")
+        .from("store_notifications")
+        .select("id, store_id, type, title, body, metadata, is_read, created_at")
         .in("store_id", storeIds)
         .order("created_at", { ascending: false })
         .limit(200)
-    : { data: [] as Array<{ id: string; store_id: string; type?: string | null; title: string; message?: string | null; link?: string | null; is_read: boolean; created_at: string }> };
+    : { data: [] as Array<{ id: string; store_id: string; type: string; title: string; body?: string | null; metadata?: unknown; is_read: boolean; created_at: string }> };
 
   const items = data ?? [];
   const unread = items.filter((n) => !n.is_read).length;
@@ -38,9 +50,14 @@ export default async function AccountNotificationsPage() {
         title="Notifikasi"
         description={
           items.length > 0
-            ? `${unread} belum dibaca dari ${items.length} (semua toko)`
+            ? `${unread} belum dibaca dari ${items.length}${
+                filteredStore ? ` (${filteredStore.name})` : " (semua toko)"
+              }`
+            : filteredStore
+            ? `Belum ada notifikasi untuk ${filteredStore.name}.`
             : "Notifikasi sistem & event dari semua toko Anda."
         }
+        actions={<StoreFilter stores={stores} />}
       />
       {items.length === 0 ? (
         <StoreCard padded={false}>
@@ -53,10 +70,11 @@ export default async function AccountNotificationsPage() {
       ) : (
         <div className="space-y-2">
           {items.map((n) => {
-            const store = storeById.get(n.store_id as string);
+            const store = storeById.get(n.store_id);
+            const Icon = n.type === "order_paid" ? ShoppingCart : Bell;
             return (
               <StoreCard
-                key={n.id as string}
+                key={n.id}
                 className={n.is_read ? "" : "border-primary/40 bg-primary/5"}
               >
                 <div className="flex items-start gap-3">
@@ -65,11 +83,11 @@ export default async function AccountNotificationsPage() {
                       n.is_read ? "bg-slate-100 text-slate-500" : "bg-primary/10 text-primary"
                     }`}
                   >
-                    <Bell className="size-4" />
+                    <Icon className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-[#0F172A]">{n.title as string}</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">{n.title}</p>
                       {store ? (
                         <StoreBadge
                           storeId={store.id}
@@ -79,18 +97,18 @@ export default async function AccountNotificationsPage() {
                       ) : null}
                       {!n.is_read ? <StatusBadge tone="info">Baru</StatusBadge> : null}
                     </div>
-                    {n.message ? (
-                      <p className="text-sm text-[#64748B] mt-1">{n.message as string}</p>
+                    {n.body ? (
+                      <p className="text-sm text-[#64748B] mt-1">{n.body}</p>
                     ) : null}
                     <p className="text-[11px] text-[#94A3B8] mt-1.5">
-                      {formatDate(n.created_at as string)}
+                      {formatDate(n.created_at)}
                     </p>
                   </div>
                   {!n.is_read && store ? (
                     <NotificationActions
                       storeId={store.id}
                       mode="single"
-                      id={n.id as string}
+                      id={n.id}
                     />
                   ) : null}
                 </div>

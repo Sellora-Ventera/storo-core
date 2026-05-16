@@ -6,6 +6,7 @@ import {
   Store,
   Plus,
   ArrowRight,
+  ArrowLeft,
   Globe,
   Calendar,
   LayoutTemplate,
@@ -44,6 +45,16 @@ export default async function StoresPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {/* Back to main dashboard */}
+      <div>
+        <Button asChild variant="ghost" size="sm" className="cursor-pointer text-gray-500 hover:text-gray-900 -ml-2">
+          <Link href="/dashboard">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Kembali ke Dashboard
+          </Link>
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -194,10 +205,13 @@ export default async function StoresPage() {
                         {isLive && store.store_id && (
                           <ManageStoreLink storeId={store.store_id} />
                         )}
-                        <span className="relative z-10 inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
+                        <Link
+                          href={`/dashboard/stores/${store.id}`}
+                          className="relative z-10 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:gap-2 transition-all cursor-pointer"
+                        >
                           Detail
                           <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
+                        </Link>
                       </div>
                     </div>
                   </div>

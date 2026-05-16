@@ -86,7 +86,7 @@ export default function BlogPostForm({
         return;
       }
       toast.success(isEdit ? "Artikel diperbarui" : "Artikel dibuat");
-      router.push(`/dashboard/${storeId}/blog`);
+      router.push(`/dashboard/manage-store/${storeId}/blog`);
       router.refresh();
     } finally {
       setBusy(false);
@@ -106,7 +106,7 @@ export default function BlogPostForm({
         return;
       }
       toast.success("Artikel dihapus");
-      router.push(`/dashboard/${storeId}/blog`);
+      router.push(`/dashboard/manage-store/${storeId}/blog`);
     } finally {
       setBusy(false);
     }

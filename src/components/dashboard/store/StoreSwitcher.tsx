@@ -40,8 +40,8 @@ export default function StoreSwitcher({
   const switchTo = (newStoreId: string) => {
     if (newStoreId === currentStoreId) return;
     const newPath = pathname.replace(
-      `/dashboard/${currentStoreId}`,
-      `/dashboard/${newStoreId}`
+      `/dashboard/manage-store/${currentStoreId}`,
+      `/dashboard/manage-store/${newStoreId}`
     );
     router.push(newPath);
   };

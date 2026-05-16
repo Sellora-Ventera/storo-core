@@ -28,22 +28,6 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .single();
 
-  // If user has any active stores linked to this client, redirect to the most recent one
-  if (client) {
-    const { data: activeStores } = await supabase
-      .from("stores")
-      .select("id")
-      .eq("client_id", client.id)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: true })
-      .limit(1);
-
-    if (activeStores && activeStores.length > 0) {
-      redirect(`/dashboard/${activeStores[0].id}`);
-    }
-  }
-
   const [{ data: requests }, { data: notifications }] = await Promise.all([
     client
       ? supabase

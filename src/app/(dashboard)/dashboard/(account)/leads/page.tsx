@@ -10,12 +10,23 @@ import {
   formatDate,
 } from "@/components/dashboard/store/ui";
 import StoreBadge from "@/components/dashboard/account/StoreBadge";
+import StoreFilter from "@/components/dashboard/account/StoreFilter";
 
-export default async function AccountLeadsPage() {
+export default async function AccountLeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ store?: string }>;
+}) {
   const { client } = await requireUserAndClient();
   const stores = await getUserStores(client.id);
-  const storeIds = stores.map((s) => s.id);
+  const allStoreIds = stores.map((s) => s.id);
   const storeById = new Map(stores.map((s) => [s.id, s]));
+
+  // Filter dari URL ?store=<id>. Validasi: hanya boleh toko milik client.
+  const params = await searchParams;
+  const selectedStore = params.store && storeById.has(params.store) ? params.store : null;
+  const storeIds = selectedStore ? [selectedStore] : allStoreIds;
+  const filteredStore = selectedStore ? storeById.get(selectedStore) : null;
 
   const supabase = await createSupabaseServiceClient();
   const { data } = storeIds.length
@@ -35,9 +46,12 @@ export default async function AccountLeadsPage() {
         title="Leads"
         description={
           items.length > 0
-            ? `${items.length} leads dari ${storeIds.length} toko`
+            ? `${items.length} leads${filteredStore ? ` dari ${filteredStore.name}` : ` dari ${storeIds.length} toko`}`
+            : filteredStore
+            ? `Belum ada lead untuk ${filteredStore.name}.`
             : "Daftar lead dari berbagai sumber, semua toko Anda."
         }
+        actions={<StoreFilter stores={stores} />}
       />
       {items.length === 0 ? (
         <StoreCard padded={false}>

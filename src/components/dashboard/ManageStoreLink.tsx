@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 export function ManageStoreLink({ storeId }: { storeId: string }) {
   return (
     <Link
-      href={`/dashboard/${storeId}`}
+      href={`/dashboard/manage-store/${storeId}`}
       onClick={(e) => e.stopPropagation()}
       className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-full transition cursor-pointer"
     >

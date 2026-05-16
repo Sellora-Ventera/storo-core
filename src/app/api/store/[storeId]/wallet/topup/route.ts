@@ -69,8 +69,8 @@ export async function POST(
         customer: {
           given_names: clientName,
         },
-        success_redirect_url: `${APP_URL}/dashboard/${storeId}/wallet?topup=success`,
-        failure_redirect_url: `${APP_URL}/dashboard/${storeId}/wallet?topup=failed`,
+        success_redirect_url: `${APP_URL}/dashboard/manage-store/${storeId}/wallet?topup=success`,
+        failure_redirect_url: `${APP_URL}/dashboard/manage-store/${storeId}/wallet?topup=failed`,
         currency: "IDR",
       }),
     });

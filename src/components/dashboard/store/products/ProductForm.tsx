@@ -247,7 +247,7 @@ export default function ProductForm({
         return;
       }
       toast.success(mode === "edit" ? "Produk diperbarui" : "Produk ditambahkan");
-      router.push(`/dashboard/${storeId}/products`);
+      router.push(`/dashboard/manage-store/${storeId}/products`);
       router.refresh();
     } catch {
       toast.error("Terjadi kesalahan");
@@ -559,7 +559,7 @@ export default function ProductForm({
             )}
           </button>
           <ChipButton
-            href={`/dashboard/${storeId}/products`}
+            href={`/dashboard/manage-store/${storeId}/products`}
             variant="default"
           >
             Batal

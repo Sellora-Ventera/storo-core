@@ -89,9 +89,9 @@ export default async function StoreDetailPage({
       .select(
         "id, status, store_url, plan, template_name, template_id, store_name, created_at, live_at, updated_at, requested_slug, custom_domain, status_note, assigned_engineer, files_uploaded, upload_method, client_id, store_id"
       )
-      .eq("id", id)
+      .or(`id.eq.${id},store_id.eq.${id}`)
       .eq("client_id", client.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from("invoices")
       .select("id, amount, status, paid_at, invoice_url, type, provider, due_date, created_at")
@@ -206,15 +206,27 @@ export default async function StoreDetailPage({
               <p className="text-green-700 text-sm truncate">{store.store_url}</p>
             </div>
           </div>
-          <a
-            href={`${store.store_url.replace(/\/$/, "")}/dashboard`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer flex-shrink-0"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Buka Dashboard
-          </a>
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <a
+              href={store.store_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white border border-green-300 text-green-700 hover:bg-green-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Lihat Toko
+            </a>
+            {store.store_id && (
+              <Link
+                href={`/dashboard/manage-store/${store.store_id}`}
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+              >
+                <Store className="w-4 h-4" />
+                Kelola Toko
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
         </div>
       )}
 

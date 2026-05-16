@@ -84,6 +84,6 @@ async function sendLowBalanceNotification(
       ? `Saldo wallet toko ${store.name} mendekati batas minimum (${balanceFormatted}). Segera top up agar layanan tidak terganggu.`
       : `Saldo wallet toko ${store.name} tidak mencukupi (${balanceFormatted}). Layanan pembayaran ditangguhkan. Top up untuk mengaktifkan kembali.`,
     type: isWarning ? "warning" : "error",
-    link: `/dashboard/${storeId}/wallet`,
+    link: `/dashboard/manage-store/${storeId}/wallet`,
   });
 }

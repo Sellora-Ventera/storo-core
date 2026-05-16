@@ -27,7 +27,7 @@ export default function StoreBadge({
   if (!asLink) return content;
   return (
     <Link
-      href={`/dashboard/${storeId}`}
+      href={`/dashboard/manage-store/${storeId}`}
       className="hover:opacity-80 transition cursor-pointer"
       title={`Buka dashboard ${name}`}
     >
