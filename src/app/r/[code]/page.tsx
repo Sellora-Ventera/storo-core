@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, ArrowRight, Gift, Tag } from "lucide-react";
@@ -23,13 +22,9 @@ export async function generateMetadata({ params }: ReferralPageProps) {
 export default async function ReferralPage({ params }: ReferralPageProps) {
   const { code } = await params;
 
-  // Set referral cookie (server-side, 30 days)
-  const cookieStore = await cookies();
-  cookieStore.set("storo_referral_code", code, {
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-    sameSite: "lax",
-  });
+  // Cookie `storo_referral_code` di-set oleh middleware (src/middleware.ts).
+  // Next.js 15 melarang cookies().set() di dalam Server Component, jadi tugas
+  // itu pindah ke middleware. Jangan tambahkan cookieStore.set() di sini.
 
   // Fetch referrer + active plan to personalize landing (name + discount %)
   let referrerName: string | null = null;
