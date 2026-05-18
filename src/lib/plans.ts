@@ -176,3 +176,39 @@ export function formatIDR(amount: number): string {
     minimumFractionDigits: 0,
   }).format(amount);
 }
+
+// ─── Referral program helpers (Sharelink integration) ─────────────────────
+// Tier mapping dipakai oleh:
+//   - /api/referral/preview-discount → tampilkan diskon untuk referee
+//   - Xendit webhook → cap cek reward kumulatif per bulan
+//
+// Legacy plans di-map ke tier setara berdasar harga monthly:
+//   starter (250k) ≈ basic, pro (500k) ≈ standard, advance (1M) ≈ business,
+//   flexible (750k) ≈ business
+
+const DISCOUNT_PERCENT_BY_PLAN: Record<PlanId, number> = {
+  basic: 10,
+  standard: 15,
+  business: 20,
+  custom: 20,
+  starter: 10,
+  pro: 15,
+  advance: 20,
+  flexible: 20,
+};
+
+/** Persen diskon setup fee untuk referee, berdasar paket aktif referrer. */
+export function getDiscountPercentForPlan(planId: string): number {
+  return DISCOUNT_PERCENT_BY_PLAN[planId as PlanId] ?? 0;
+}
+
+/**
+ * Cap reward kumulatif per bulan untuk referrer = monthly fee paket aktif.
+ * Returns 0 kalau plan tidak ditemukan atau custom (null monthly).
+ *
+ * Filosofi: max referrer bisa "gratiskan" subscription bulan itu via referral.
+ */
+export function getRewardCapForPlan(planId: string): number {
+  const plan = getPlan(planId);
+  return plan?.monthly ?? 0;
+}

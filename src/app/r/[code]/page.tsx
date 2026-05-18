@@ -1,9 +1,9 @@
-import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ArrowRight, Gift } from "lucide-react";
+import { CheckCircle2, ArrowRight, Gift, Tag } from "lucide-react";
 import storoLogo from "@/assets/storo-logo.png";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { getDiscountPercentForPlan, getPlan } from "@/lib/plans";
 
 interface ReferralPageProps {
   params: Promise<{ code: string }>;
@@ -22,25 +22,38 @@ export async function generateMetadata({ params }: ReferralPageProps) {
 export default async function ReferralPage({ params }: ReferralPageProps) {
   const { code } = await params;
 
-  // Set referral cookie (server-side, 30 days)
-  const cookieStore = await cookies();
-  cookieStore.set("storo_referral_code", code, {
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-    sameSite: "lax",
-  });
+  // Cookie `storo_referral_code` di-set oleh middleware (src/middleware.ts).
+  // Next.js 15 melarang cookies().set() di dalam Server Component, jadi tugas
+  // itu pindah ke middleware. Jangan tambahkan cookieStore.set() di sini.
 
-  // Fetch referrer name from Supabase
+  // Fetch referrer + active plan to personalize landing (name + discount %)
   let referrerName: string | null = null;
+  let discountPercent = 0;
+  let referrerPlanName: string | null = null;
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase
+    const supabase = await createSupabaseServiceClient();
+    const { data: client } = await supabase
       .from("clients")
-      .select("full_name, store_name")
-      .eq("referral_code", code)
-      .single();
-    if (data) {
-      referrerName = data.full_name || data.store_name || null;
+      .select("id, full_name")
+      .eq("own_referral_code", code)
+      .maybeSingle();
+
+    if (client) {
+      referrerName = client.full_name || null;
+
+      const { data: requests } = await supabase
+        .from("onboarding_requests")
+        .select("plan, status")
+        .eq("client_id", client.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const liveOrPending = (requests ?? []).find((r) => r.status === "live")
+        ?? (requests ?? []).find((r) => r.status !== "rejected");
+      if (liveOrPending?.plan) {
+        discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+        referrerPlanName = getPlan(liveOrPending.plan)?.name ?? null;
+      }
     }
   } catch {
     // Silently fail — generic message will be shown
@@ -134,7 +147,7 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
               </ul>
 
               {/* Referral code display */}
-              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-6 flex items-center justify-between">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-3 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 mb-0.5">Kode referral Anda</p>
                   <p className="font-mono font-bold text-primary tracking-widest text-sm">{code}</p>
@@ -143,6 +156,25 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
                   Aktif
                 </span>
               </div>
+
+              {/* Discount tier badge — only if referrer has an active plan */}
+              {discountPercent > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                  <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Tag className="w-4 h-4 text-green-700" />
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-semibold text-green-900">
+                      Diskon {discountPercent}% setup fee
+                    </p>
+                    {referrerPlanName && (
+                      <p className="text-green-700 text-xs">
+                        Berlaku karena referrer Anda berlangganan paket {referrerPlanName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* CTA */}
               <Link

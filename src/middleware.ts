@@ -26,6 +26,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Referral landing: set storo_referral_code cookie here. Next.js 15 melarang
+  // cookies().set() di Server Component, jadi tidak bisa di-set dari
+  // src/app/r/[code]/page.tsx — harus lewat middleware atau Route Handler.
+  const referralMatch = pathname.match(/^\/r\/([^/]+)/);
+  if (referralMatch) {
+    const refCode = referralMatch[1];
+    const res = NextResponse.next();
+    if (refCode && refCode.length <= 50) {
+      res.cookies.set("storo_referral_code", refCode, {
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
+        sameSite: "lax",
+      });
+    }
+    return res;
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
   const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
 
