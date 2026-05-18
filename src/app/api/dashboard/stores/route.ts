@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPlan } from "@/lib/plans";
+import { getDiscountPercentForPlan, getPlan } from "@/lib/plans";
 
 function getServiceClient() {
   return createClient(
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("id, full_name, phone")
+      .select("id, full_name, phone, referred_by_code")
       .eq("user_id", user.id)
       .single();
 
@@ -99,8 +99,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // Resolve diskon referral kalau client ini di-refer oleh seseorang.
+    // Dihitung di server (jangan trust client) — sumber kebenaran tetap di sini.
+    let discountPercent = 0;
+    if (client.referred_by_code) {
+      const { data: referrer } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("own_referral_code", client.referred_by_code)
+        .maybeSingle();
+
+      if (referrer) {
+        const { data: requests } = await supabase
+          .from("onboarding_requests")
+          .select("plan, status, created_at")
+          .eq("client_id", referrer.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        const liveOrPending = (requests ?? []).find((r) => r.status === "live")
+          ?? (requests ?? []).find((r) => r.status !== "rejected");
+        if (liveOrPending?.plan) {
+          discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+        }
+      }
+    }
+
     const setupAmount = plan.setup;
-    const description = `Setup Webstore Storo.id — Paket ${plan.name} (${slug})`;
+    const discountAmount = discountPercent > 0
+      ? Math.round((setupAmount * discountPercent) / 100)
+      : 0;
+    const invoiceAmount = setupAmount - discountAmount;
+    const description = discountAmount > 0
+      ? `Setup Webstore Storo.id — Paket ${plan.name} (${slug}) — Diskon referral ${discountPercent}%`
+      : `Setup Webstore Storo.id — Paket ${plan.name} (${slug})`;
 
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
@@ -108,7 +140,7 @@ export async function POST(request: Request) {
         client_id: client.id,
         type: "setup",
         description,
-        amount: setupAmount,
+        amount: invoiceAmount,
         status: "unpaid",
         due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
           .toISOString()

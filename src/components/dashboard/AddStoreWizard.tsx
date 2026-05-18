@@ -57,9 +57,16 @@ function slugify(text: string): string {
 export interface AddStoreWizardProps {
   client: { full_name: string; phone: string };
   userEmail: string;
+  discountPercent?: number;
+  referralCode?: string | null;
 }
 
-export default function AddStoreWizard({ client, userEmail }: AddStoreWizardProps) {
+export default function AddStoreWizard({
+  client,
+  userEmail,
+  discountPercent = 0,
+  referralCode = null,
+}: AddStoreWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [plan, setPlan] = useState<PlanId>("pro");
@@ -141,6 +148,8 @@ export default function AddStoreWizard({ client, userEmail }: AddStoreWizardProp
           storeName={storeName}
           client={client}
           userEmail={userEmail}
+          discountPercent={discountPercent}
+          referralCode={referralCode}
           onPrev={goPrev}
           onCancel={() => router.push("/dashboard/stores")}
         />
@@ -600,6 +609,8 @@ function Step3Summary({
   storeName,
   client,
   userEmail,
+  discountPercent,
+  referralCode,
   onPrev,
   onCancel,
 }: {
@@ -609,6 +620,8 @@ function Step3Summary({
   storeName: string;
   client: { full_name: string; phone: string };
   userEmail: string;
+  discountPercent: number;
+  referralCode: string | null;
   onPrev: () => void;
   onCancel: () => void;
 }) {
@@ -617,7 +630,10 @@ function Step3Summary({
   const [manualInvoiceId, setManualInvoiceId] = useState<string | null>(null);
 
   const planObj = getPlan(plan);
-  const total = planObj?.setup ?? 0;
+  const setupFee = planObj?.setup ?? 0;
+  const discountAmount =
+    discountPercent > 0 ? Math.round((setupFee * discountPercent) / 100) : 0;
+  const total = setupFee - discountAmount;
   const isSubdomain = selectedDomain.endsWith(".storo.id");
   const customDomainForApi = isSubdomain ? undefined : selectedDomain;
 
@@ -696,6 +712,16 @@ function Step3Summary({
                 {formatIDR(planObj.monthly!)}/bln
               </span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">
+                  Diskon Referral {discountPercent}%
+                </span>
+                <span className="text-sm font-semibold text-green-700">
+                  −{formatIDR(discountAmount)}
+                </span>
+              </div>
+            )}
           </>
         )}
 
@@ -706,6 +732,16 @@ function Step3Summary({
           <span className="text-lg font-bold text-primary">{formatIDR(total)}</span>
         </div>
       </div>
+
+      {referralCode && discountAmount > 0 && (
+        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mt-4">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>
+            Diskon {discountPercent}% diterapkan dari kode referral{" "}
+            <strong>{referralCode}</strong>
+          </span>
+        </div>
+      )}
 
       {apiError && (
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-4 text-sm text-amber-800">
