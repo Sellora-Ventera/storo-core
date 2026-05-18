@@ -86,6 +86,13 @@ export default async function OrdersPage({
 
   const stores = (liveStores ?? []).filter((s) => s.store_id != null);
 
+  // Single-store user: redirect ke per-store orders page supaya nggak terjebak
+  // di view agregasi yang setara dengan per-store. View agregasi hanya berguna
+  // untuk multi-toko user. Kalau ada filter di URL, hormati intent user (jangan redirect).
+  if (stores.length === 1 && !storeFilter && !statusFilter) {
+    redirect(`/dashboard/manage-store/${stores[0].store_id}/orders`);
+  }
+
   if (stores.length === 0) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">

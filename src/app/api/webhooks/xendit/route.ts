@@ -5,15 +5,11 @@ import { deductOpsFeeForOrder } from "@/lib/wallet/deduct-ops-fee";
 export const dynamic = "force-dynamic";
 
 /**
- * Xendit callback for buyer order payments.
- * external_id format: STORO-ORD-{orderId}
+ * Xendit callback for buyer orders (STORO-ORD-*) and seller setup invoices (STORO-INV-*).
  *
- * Token verification (dual-mode):
- *   1. XENDIT_WEBHOOK_TOKEN — VenteraAI platform token (storo_gateway orders)
- *   2. stores.settings.payment.xendit_callback_token — per-store token (own_prepaid orders)
- *
- * Other external_id prefixes are acknowledged without processing:
- *   STORO-INV-*    → handled by storo-payment-confirm edge function
+ * Token verification:
+ *   STORO-ORD-*: XENDIT_WEBHOOK_TOKEN OR stores.settings.payment.xendit_callback_token
+ *   STORO-INV-*: XENDIT_WEBHOOK_TOKEN (platform-level only)
  *   STORO-WALLET-* → handled by /api/webhooks/xendit-wallet
  *
  * Register in Xendit dashboard:
@@ -36,9 +32,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { external_id, status, id: invoiceId, paid_at, payment_method } = body;
+  const { external_id, status, id: invoiceId, paid_at, payment_method, payment_channel } = body;
 
-  // Only handle STORO-ORD-* — pass through everything else silently
+  // Setup invoice (seller pays setup fee from onboarding wizard or dashboard billing)
+  if (external_id?.startsWith("STORO-INV-")) {
+    return handleSetupInvoice(request, {
+      external_id,
+      invoiceId,
+      status,
+      paid_at,
+      payment_method,
+      payment_channel,
+    });
+  }
+
+  // Only handle STORO-ORD-* below — pass through everything else silently
   if (!external_id?.startsWith("STORO-ORD-")) {
     return NextResponse.json({ received: true });
   }
@@ -227,5 +235,91 @@ export async function POST(request: NextRequest) {
     console.log("[xendit-order] Order expired:", order.order_number);
   }
 
+  return NextResponse.json({ received: true });
+}
+
+async function handleSetupInvoice(
+  request: NextRequest,
+  body: {
+    external_id: string;
+    invoiceId?: string;
+    status?: string;
+    paid_at?: string;
+    payment_method?: string;
+    payment_channel?: string;
+  }
+) {
+  const token = request.headers.get("x-callback-token");
+  const platformToken = process.env.XENDIT_WEBHOOK_TOKEN;
+  if (!platformToken || token !== platformToken) {
+    console.warn("[xendit-inv] Invalid token for", body.external_id);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (body.status !== "PAID" && body.status !== "SETTLED") {
+    return NextResponse.json({ received: true, skipped: `status ${body.status}` });
+  }
+
+  const invoiceUuid = body.external_id.replace("STORO-INV-", "");
+  if (!invoiceUuid || invoiceUuid.length < 10) {
+    console.error("[xendit-inv] Invalid external_id:", body.external_id);
+    return NextResponse.json({ received: true });
+  }
+
+  const supabase = await createSupabaseServiceClient();
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id, status, client_id, metadata")
+    .eq("id", invoiceUuid)
+    .maybeSingle();
+
+  if (!invoice) {
+    console.warn("[xendit-inv] Invoice not found:", invoiceUuid);
+    return NextResponse.json({ received: true });
+  }
+
+  if (invoice.status === "paid") {
+    return NextResponse.json({ received: true, skipped: "already paid" });
+  }
+
+  const existingMeta =
+    typeof invoice.metadata === "object" && invoice.metadata !== null
+      ? (invoice.metadata as Record<string, unknown>)
+      : {};
+
+  const { error: updateErr } = await supabase
+    .from("invoices")
+    .update({
+      status: "paid",
+      paid_at: body.paid_at ?? new Date().toISOString(),
+      payment_method: body.payment_method ?? null,
+      payment_channel: body.payment_channel ?? null,
+      metadata: {
+        ...existingMeta,
+        xendit_confirmed_at: new Date().toISOString(),
+        xendit_invoice_id: body.invoiceId,
+        xendit_payment_method: body.payment_method ?? null,
+        xendit_payment_channel: body.payment_channel ?? null,
+      },
+    })
+    .eq("id", invoice.id);
+
+  if (updateErr) {
+    console.error("[xendit-inv] Update failed:", updateErr);
+    return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+  }
+
+  if (invoice.client_id) {
+    await supabase.from("client_notifications").insert({
+      client_id: invoice.client_id,
+      title: "Pembayaran Diterima",
+      message: `Pembayaran setup${body.payment_method ? ` via ${body.payment_method}` : ""} telah dikonfirmasi. Tim kami akan segera memproses.`,
+      type: "success",
+      link: `/dashboard/billing/${invoice.id}`,
+    });
+  }
+
+  console.log("[xendit-inv] Invoice paid:", invoice.id);
   return NextResponse.json({ received: true });
 }

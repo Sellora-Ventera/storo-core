@@ -93,6 +93,10 @@ export async function POST(request: Request) {
 
     if (requestError) {
       console.error("[dashboard/stores] Onboarding request error:", requestError);
+      return NextResponse.json(
+        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
+        { status: 500 }
+      );
     }
 
     const setupAmount = plan.setup;

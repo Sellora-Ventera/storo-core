@@ -164,6 +164,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Create onboarding request ─────────────────────────────────
+    // Fatal: if this fails the user has nothing to show in their dashboard
+    // after paying. Better to surface the error before the invoice is created.
     const { error: requestError } = await supabase
       .from("onboarding_requests")
       .insert({
@@ -177,7 +179,10 @@ export async function POST(request: NextRequest) {
 
     if (requestError) {
       console.error("[checkout] Onboarding request error:", requestError);
-      // Non-fatal: continue to invoice creation
+      return NextResponse.json(
+        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
+        { status: 500 }
+      );
     }
 
     // ── Create invoice ────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,9 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
+
+const SHOPEE_UPLOADS_BUCKET = "shopee-uploads";
+const SIGNED_URL_TTL = 60 * 60 * 24; // 24h
 import { PLANS } from "@/lib/plans";
 import { StoreEditDialog } from "@/components/dashboard/StoreEditDialog";
 import { STATUS_CONFIG, getStepIndex, type StatusKey } from "@/lib/store-status";
@@ -60,8 +63,15 @@ function formatDate(value: string | null): string {
 
 interface UploadedFile {
   name?: string;
-  url?: string;
   size?: number;
+  storage_path?: string;
+  uploaded_at?: string;
+  // Legacy (pre-2026-05-18) — beberapa baris lama mungkin masih punya field ini
+  url?: string;
+}
+
+interface FileWithUrl extends UploadedFile {
+  signedUrl: string | null;
 }
 
 export default async function StoreDetailPage({
@@ -117,6 +127,20 @@ export default async function StoreDetailPage({
 
   const filesRaw = (store.files_uploaded ?? []) as unknown;
   const files: UploadedFile[] = Array.isArray(filesRaw) ? (filesRaw as UploadedFile[]) : [];
+
+  // Generate signed URL for each file (24h) so download links work for the client.
+  // Files uploaded sebelum 2026-05-18 yang masih punya `url` field langsung dipakai.
+  const service = await createSupabaseServiceClient();
+  const filesWithUrls: FileWithUrl[] = await Promise.all(
+    files.map(async (f) => {
+      if (f.url) return { ...f, signedUrl: f.url };
+      if (!f.storage_path) return { ...f, signedUrl: null };
+      const { data } = await service.storage
+        .from(SHOPEE_UPLOADS_BUCKET)
+        .createSignedUrl(f.storage_path, SIGNED_URL_TTL);
+      return { ...f, signedUrl: data?.signedUrl ?? null };
+    }),
+  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -424,46 +448,74 @@ export default async function StoreDetailPage({
       )}
 
       {/* Files uploaded */}
-      {files.length > 0 && store.upload_method !== "whatsapp" && (
+      {store.upload_method !== "whatsapp" && (
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-5">
-            File yang Di-upload
-          </h2>
-          <div className="space-y-2">
-            {files.map((file, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between gap-3 p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-4.5 h-4.5 text-gray-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {file.name ?? `File ${idx + 1}`}
-                    </p>
-                    {file.size != null && (
-                      <p className="text-xs text-gray-400">
-                        {(file.size / 1024).toFixed(1)} KB
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {file.url && (
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 cursor-pointer flex-shrink-0"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download
-                  </a>
-                )}
-              </div>
-            ))}
+          <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              File Shopee ({filesWithUrls.length})
+            </h2>
+            <Button asChild size="sm" variant="outline" className="cursor-pointer">
+              <Link href={`/dashboard/stores/${store.id}/upload`}>
+                <Upload className="w-3.5 h-3.5 mr-1.5" />
+                {filesWithUrls.length === 0 ? "Upload Sekarang" : "Tambah / Kelola"}
+              </Link>
+            </Button>
           </div>
+
+          {filesWithUrls.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">
+              Belum ada file Shopee yang di-upload. Klik tombol di atas untuk mulai.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filesWithUrls.map((file, idx) => (
+                <div
+                  key={file.storage_path ?? idx}
+                  className="flex items-center justify-between gap-3 p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
+                      <FileText className="w-4.5 h-4.5 text-gray-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {file.name ?? `File ${idx + 1}`}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {file.size != null && (
+                          <>
+                            {file.size < 1024 * 1024
+                              ? `${(file.size / 1024).toFixed(1)} KB`
+                              : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
+                          </>
+                        )}
+                        {file.uploaded_at && (
+                          <>
+                            {file.size != null ? " · " : ""}
+                            {new Date(file.uploaded_at).toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {file.signedUrl && (
+                    <a
+                      href={file.signedUrl}
+                      download={file.name}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 cursor-pointer shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
