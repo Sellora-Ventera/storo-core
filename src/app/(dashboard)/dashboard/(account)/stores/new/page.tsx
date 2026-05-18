@@ -1,8 +1,9 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import AddStoreWizard from "@/components/dashboard/AddStoreWizard";
+import { getDiscountPercentForPlan } from "@/lib/plans";
 
 export const metadata = { title: "Tambah Toko Baru — Storo.id" };
 
@@ -14,11 +15,39 @@ export default async function AddStorePage() {
 
   const { data: client } = await supabase
     .from("clients")
-    .select("full_name, phone")
+    .select("id, full_name, phone, referred_by_code")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (!client) redirect("/dashboard");
+
+  // Hitung diskon referral kalau client ini di-refer oleh seseorang.
+  // Sumber kebenaran tetap dihitung lagi di POST /api/dashboard/stores —
+  // angka di sini hanya untuk UI summary, tidak boleh dipercaya untuk pricing.
+  let discountPercent = 0;
+  if (client.referred_by_code) {
+    const admin = await createSupabaseServiceClient();
+    const { data: referrer } = await admin
+      .from("clients")
+      .select("id")
+      .eq("own_referral_code", client.referred_by_code)
+      .maybeSingle();
+
+    if (referrer) {
+      const { data: requests } = await admin
+        .from("onboarding_requests")
+        .select("plan, status, created_at")
+        .eq("client_id", referrer.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const liveOrPending = (requests ?? []).find((r) => r.status === "live")
+        ?? (requests ?? []).find((r) => r.status !== "rejected");
+      if (liveOrPending?.plan) {
+        discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+      }
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -39,6 +68,8 @@ export default async function AddStorePage() {
       <AddStoreWizard
         client={{ full_name: client.full_name ?? "", phone: client.phone ?? "" }}
         userEmail={user.email ?? ""}
+        discountPercent={discountPercent}
+        referralCode={client.referred_by_code ?? null}
       />
     </div>
   );
