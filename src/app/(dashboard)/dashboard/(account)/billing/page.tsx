@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Receipt, CreditCard, TrendingUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Receipt, CreditCard, TrendingUp, CheckCircle2, Clock, AlertCircle, XCircle } from "lucide-react";
+import { PLANS } from "@/lib/plans";
 
 function formatIDR(amount: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -12,8 +14,10 @@ function formatIDR(amount: number) {
 
 const INVOICE_STATUS_CONFIG = {
   paid: { label: "Lunas", color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle2 },
+  unpaid: { label: "Menunggu Pembayaran", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock },
   pending: { label: "Menunggu Pembayaran", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock },
   overdue: { label: "Terlambat", color: "bg-red-100 text-red-700 border-red-200", icon: AlertCircle },
+  cancelled: { label: "Dibatalkan", color: "bg-gray-100 text-gray-600 border-gray-200", icon: XCircle },
 } as const;
 
 const DISBURSE_STATUS_CONFIG = {
@@ -22,11 +26,9 @@ const DISBURSE_STATUS_CONFIG = {
   paid: { label: "Dibayar", color: "bg-green-100 text-green-700" },
 } as const;
 
-const PLAN_LABELS: Record<string, string> = {
-  starter: "Starter",
-  business: "Business",
-  enterprise: "Enterprise",
-};
+const PLAN_LABELS: Record<string, string> = Object.fromEntries(
+  PLANS.map((p) => [p.id, p.name]),
+);
 
 export default async function BillingPage() {
   const supabase = await createSupabaseServerClient();
@@ -44,7 +46,7 @@ export default async function BillingPage() {
     client
       ? supabase
           .from("invoices")
-          .select("id, amount, status, plan, due_date, paid_at, created_at")
+          .select("id, amount, status, type, description, due_date, paid_at, created_at")
           .eq("client_id", client.id)
           .order("created_at", { ascending: false })
       : { data: [] },
@@ -119,38 +121,47 @@ export default async function BillingPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {invoices.map((inv) => {
-                  const status = (inv.status as keyof typeof INVOICE_STATUS_CONFIG) ?? "pending";
-                  const statusCfg = INVOICE_STATUS_CONFIG[status] ?? INVOICE_STATUS_CONFIG.pending;
+                  const status = (inv.status as keyof typeof INVOICE_STATUS_CONFIG) ?? "unpaid";
+                  const statusCfg = INVOICE_STATUS_CONFIG[status] ?? INVOICE_STATUS_CONFIG.unpaid;
                   const StatusIcon = statusCfg.icon;
+                  const label =
+                    inv.description ??
+                    (inv.type === "setup" ? "Biaya Setup Webstore" : inv.type === "monthly" ? "Biaya Bulanan" : "Tagihan");
                   return (
-                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
                       <td className="px-5 py-3.5 text-sm text-gray-600">
-                        {new Date(inv.created_at).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
+                        <Link href={`/dashboard/billing/${inv.id}`} className="block">
+                          {new Date(inv.created_at).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </Link>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-gray-900 font-medium">
-                        {inv.plan ? `Langganan Paket ${PLAN_LABELS[inv.plan] ?? inv.plan}` : "Tagihan"}
+                        <Link href={`/dashboard/billing/${inv.id}`} className="block">{label}</Link>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-gray-900 font-semibold text-right tabular-nums">
-                        {formatIDR(inv.amount)}
+                        <Link href={`/dashboard/billing/${inv.id}`} className="block">{formatIDR(inv.amount)}</Link>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${statusCfg.color}`}>
-                          <StatusIcon className="w-3 h-3" />
-                          {statusCfg.label}
-                        </span>
+                        <Link href={`/dashboard/billing/${inv.id}`} className="block">
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${statusCfg.color}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {statusCfg.label}
+                          </span>
+                        </Link>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-gray-500">
-                        {inv.due_date
-                          ? new Date(inv.due_date).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })
-                          : "—"}
+                        <Link href={`/dashboard/billing/${inv.id}`} className="block">
+                          {inv.due_date
+                            ? new Date(inv.due_date).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "—"}
+                        </Link>
                       </td>
                     </tr>
                   );

@@ -13,7 +13,6 @@ import {
   HelpCircle,
   LogOut,
   Gift,
-  Upload,
   ChevronsUpDown,
   Settings,
   Menu,
@@ -66,7 +65,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { title: "Profil", href: "/dashboard/profile", icon: User },
       { title: "Referral", href: "/dashboard/referral", icon: Gift },
-      { title: "Upload Dokumen", href: "/dashboard/upload", icon: Upload },
       { title: "Bantuan", href: "/dashboard/help", icon: HelpCircle },
     ],
   },
