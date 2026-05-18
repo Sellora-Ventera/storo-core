@@ -7,9 +7,20 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, CheckCircle2, Gift } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import storoLogo from "@/assets/storo-logo.png";
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+      <path d="M47.532 24.552c0-1.636-.141-3.2-.402-4.704H24.48v8.897h12.984c-.56 3.018-2.26 5.576-4.814 7.29v6.056h7.794c4.56-4.2 7.088-10.39 7.088-17.539z" fill="#4285F4" />
+      <path d="M24.48 48c6.514 0 11.978-2.16 15.97-5.91l-7.794-6.056c-2.16 1.446-4.92 2.3-8.176 2.3-6.288 0-11.618-4.248-13.522-9.953H2.904v6.25C6.876 42.612 15.106 48 24.48 48z" fill="#34A853" />
+      <path d="M10.958 28.381A14.48 14.48 0 0 1 9.72 24c0-1.52.26-2.994.716-4.381v-6.25H2.904A23.97 23.97 0 0 0 .48 24c0 3.864.928 7.52 2.424 10.631l8.054-6.25z" fill="#FBBC05" />
+      <path d="M24.48 9.666c3.542 0 6.718 1.218 9.216 3.61l6.912-6.912C36.446 2.428 30.994 0 24.48 0 15.106 0 6.876 5.388 2.904 13.369l8.054 6.25c1.904-5.705 7.234-9.953 13.522-9.953z" fill="#EA4335" />
+    </svg>
+  );
+}
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -18,15 +29,45 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
-    // Pick up referral code stored by /r/[code] page
-    const code = sessionStorage.getItem("storo_referral_code");
-    if (code) setReferralCode(code);
+    // Pick up referral code stored by /r/[code] page (sessionStorage script tag)
+    // or by middleware (cookie). sessionStorage wins because it's same-tab and
+    // implies fresh intent.
+    const fromSession = sessionStorage.getItem("storo_referral_code");
+    if (fromSession) {
+      setReferralCode(fromSession);
+      return;
+    }
+    const cookieMatch = document.cookie.match(/(?:^|;\s*)storo_referral_code=([^;]+)/);
+    if (cookieMatch) setReferralCode(decodeURIComponent(cookieMatch[1]));
   }, []);
+
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    const supabase = getSupabaseBrowserClient();
+    // Pass the referral code via the OAuth `next` URL so /api/auth/callback
+    // can stash it on the new client row. Cookie storo_referral_code is set
+    // by middleware and survives the OAuth round-trip too as a fallback.
+    const next = referralCode
+      ? `/onboarding?ref=${encodeURIComponent(referralCode)}`
+      : "/onboarding";
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,13 +168,42 @@ export default function SignUpPage() {
         </p>
 
         {referralCode && (
-          <div className="bg-secondary/10 border border-secondary/20 text-secondary-foreground text-sm rounded-lg px-4 py-3 mb-6 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-secondary flex-shrink-0" />
-            <span>
-              Kode referral <strong>{referralCode}</strong> aktif — Anda akan mendapat diskon setup fee!
-            </span>
+          <div className="relative mb-6 overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-emerald-50/60 to-white px-4 py-3.5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/30">
+                <Gift className="h-4 w-4 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700/90">
+                  Kode referral aktif
+                </p>
+                <p className="mt-0.5 font-mono text-base font-bold tracking-wider text-emerald-900">
+                  {referralCode}
+                </p>
+                <p className="mt-1 text-xs text-emerald-700/80">
+                  Diskon setup fee akan otomatis di-apply saat onboarding
+                </p>
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Google OAuth — primary path */}
+        <button
+          type="button"
+          onClick={handleGoogleSignUp}
+          disabled={googleLoading || loading}
+          className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
+          <span>{googleLoading ? "Menghubungkan..." : "Daftar dengan Google"}</span>
+        </button>
+
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">atau daftar dengan email</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
 
         <form onSubmit={handleSignUp} className="space-y-5">
           <div className="space-y-2">
@@ -197,7 +267,7 @@ export default function SignUpPage() {
           <Button
             type="submit"
             className="w-full btn-hero h-11 cursor-pointer"
-            disabled={loading}
+            disabled={loading || googleLoading}
           >
             {loading ? (
               <>
