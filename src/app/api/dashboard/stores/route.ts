@@ -209,26 +209,38 @@ export async function POST(request: Request) {
     // on the `purchase` event from xendit webhook when invoice is paid).
     // Idempotent: Sharelink dedupes per (code, referee_id, event_type), so
     // multiple add-store cycles to the same code won't double-count.
+    //
+    // Defensive: sharelinkClient() throws synchronously if SHARELINK_BASE_URL
+    // or SHARELINK_SECRET_KEY env vars are missing. We MUST NOT let that crash
+    // the checkout — the invoice is already inserted, the user must reach
+    // the payment page no matter what. Wrap the whole thing in try/catch.
     if (effectiveReferralCode) {
-      const sl = sharelinkClient();
-      sl.triggerEvent({
-        referralCode: effectiveReferralCode,
-        eventType: "signup",
-        refereeId: user.id,
-        refereeEmail: user.email ?? undefined,
-        refereeName: client.full_name ?? undefined,
-        metadata: {
-          source: "storo_dashboard_add_store",
-          invoice_id: invoice.id,
-          plan: planId,
-        },
-      }).catch((err) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        // Duplicate event = idempotent retry from a prior add-store, not an error
-        if (!msg.includes("Duplicate event")) {
-          console.warn("[dashboard/stores] signup event fire failed:", msg);
-        }
-      });
+      try {
+        const sl = sharelinkClient();
+        sl.triggerEvent({
+          referralCode: effectiveReferralCode,
+          eventType: "signup",
+          refereeId: user.id,
+          refereeEmail: user.email ?? undefined,
+          refereeName: client.full_name ?? undefined,
+          metadata: {
+            source: "storo_dashboard_add_store",
+            invoice_id: invoice.id,
+            plan: planId,
+          },
+        }).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          // Duplicate event = idempotent retry from a prior add-store, not an error
+          if (!msg.includes("Duplicate event")) {
+            console.warn("[dashboard/stores] signup event fire failed:", msg);
+          }
+        });
+      } catch (err) {
+        console.warn(
+          "[dashboard/stores] sharelinkClient init failed (env vars missing?):",
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
 
     const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";
