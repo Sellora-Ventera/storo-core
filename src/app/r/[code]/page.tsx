@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, ArrowRight, Gift, Tag } from "lucide-react";
@@ -25,6 +26,26 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
   // Cookie `storo_referral_code` di-set oleh middleware (src/middleware.ts).
   // Next.js 15 melarang cookies().set() di dalam Server Component, jadi tugas
   // itu pindah ke middleware. Jangan tambahkan cookieStore.set() di sini.
+
+  // Click tracking — Sharelink's portal dashboard reads `metadata.clicks` on
+  // the referral code. Sharelink only auto-increments it for visits to
+  // sharelink.id/r/<code>; visits to storo.id/r/<code> never hit that route,
+  // so we ping Sharelink ourselves. `after()` runs the fetch AFTER the page
+  // response is sent, so the landing-page render is never blocked.
+  const sharelinkBase = process.env.SHARELINK_BASE_URL;
+  if (sharelinkBase && code && code.length <= 50) {
+    after(async () => {
+      try {
+        await fetch(
+          `${sharelinkBase.replace(/\/+$/, "")}/api/public/codes/${encodeURIComponent(code)}/click`,
+          { method: "POST", signal: AbortSignal.timeout(5000) },
+        );
+      } catch {
+        // Missed clicks are acceptable — landing still rendered, visitor
+        // unaffected. Don't log noisily; track via Sharelink request logs.
+      }
+    });
+  }
 
   // Fetch referrer + active plan to personalize landing (name + discount %)
   let referrerName: string | null = null;
