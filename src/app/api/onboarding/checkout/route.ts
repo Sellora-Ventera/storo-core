@@ -342,25 +342,34 @@ export async function POST(request: NextRequest) {
     // still create the reward correctly because Sharelink doesn't require a
     // signup event to precede a purchase.
     if (effectiveReferralCode) {
-      const sl = sharelinkClient();
-      sl.triggerEvent({
-        referralCode: effectiveReferralCode,
-        eventType: "signup",
-        refereeId: userId,
-        refereeEmail: email.trim(),
-        refereeName: fullName.trim(),
-        metadata: {
-          source: "storo_onboarding_checkout",
-          invoice_id: invoice.id,
-          plan: planId,
-        },
-      }).catch((err) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        // Duplicate event = idempotent retry, not an error
-        if (!msg.includes("Duplicate event")) {
-          console.warn("[checkout] signup event fire failed:", msg);
-        }
-      });
+      // Defensive: sharelinkClient() throws synchronously if env vars missing.
+      // Don't let it crash the route — invoice is created, user must reach payment.
+      try {
+        const sl = sharelinkClient();
+        sl.triggerEvent({
+          referralCode: effectiveReferralCode,
+          eventType: "signup",
+          refereeId: userId,
+          refereeEmail: email.trim(),
+          refereeName: fullName.trim(),
+          metadata: {
+            source: "storo_onboarding_checkout",
+            invoice_id: invoice.id,
+            plan: planId,
+          },
+        }).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          // Duplicate event = idempotent retry, not an error
+          if (!msg.includes("Duplicate event")) {
+            console.warn("[checkout] signup event fire failed:", msg);
+          }
+        });
+      } catch (err) {
+        console.warn(
+          "[checkout] sharelinkClient init failed (env vars missing?):",
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
 
     // ── Create Xendit invoice via edge function (Gateway pattern) ──
