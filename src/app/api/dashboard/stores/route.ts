@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDiscountPercentForPlan, getPlan } from "@/lib/plans";
+import { sharelinkClient } from "@/lib/sharelink/client";
 
 function getServiceClient() {
   return createClient(
@@ -201,6 +202,34 @@ export async function POST(request: Request) {
       invoice_id: invoice.id,
       status: "account_created",
     });
+
+    // ── Fire Sharelink signup event (best-effort) ─────────────────
+    // Same pattern as /api/onboarding/checkout. Counts as a "conversion" in
+    // the referrer's portal dashboard. Doesn't create a reward (reward gated
+    // on the `purchase` event from xendit webhook when invoice is paid).
+    // Idempotent: Sharelink dedupes per (code, referee_id, event_type), so
+    // multiple add-store cycles to the same code won't double-count.
+    if (effectiveReferralCode) {
+      const sl = sharelinkClient();
+      sl.triggerEvent({
+        referralCode: effectiveReferralCode,
+        eventType: "signup",
+        refereeId: user.id,
+        refereeEmail: user.email ?? undefined,
+        refereeName: client.full_name ?? undefined,
+        metadata: {
+          source: "storo_dashboard_add_store",
+          invoice_id: invoice.id,
+          plan: planId,
+        },
+      }).catch((err) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Duplicate event = idempotent retry from a prior add-store, not an error
+        if (!msg.includes("Duplicate event")) {
+          console.warn("[dashboard/stores] signup event fire failed:", msg);
+        }
+      });
+    }
 
     const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

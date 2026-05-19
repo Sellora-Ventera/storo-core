@@ -1,4 +1,5 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -49,6 +50,16 @@ export default async function AddStorePage() {
     }
   }
 
+  // Auto-fill referral code dari cookie kalau user belum punya attribution.
+  // Cookie di-set oleh middleware saat user akses /r/<code> (persist 30 hari),
+  // jadi user yang baru aja klik link referral lalu pergi ke /dashboard/stores/new
+  // langsung dapet kode-nya pre-filled. Hanya untuk display awal — kalau user
+  // ganti/hapus inputnya, backend tetap re-validate.
+  const cookieStore = await cookies();
+  const cookieReferralCode = cookieStore.get("storo_referral_code")?.value ?? null;
+  const prefilledReferralCode =
+    !client.referred_by_code && cookieReferralCode ? cookieReferralCode : null;
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
@@ -70,6 +81,7 @@ export default async function AddStorePage() {
         userEmail={user.email ?? ""}
         discountPercent={discountPercent}
         referralCode={client.referred_by_code ?? null}
+        prefilledReferralCode={prefilledReferralCode}
       />
     </div>
   );
