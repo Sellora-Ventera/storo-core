@@ -149,8 +149,10 @@ export async function POST(request: NextRequest) {
       .eq("id", order.store_id)
       .single();
 
-    // Deduct 1% ops fee from wallet (storo_gateway only)
-    if (store?.billing_model === "storo_gateway") {
+    // Deduct 1% ops fee from wallet (own_prepaid only). For storo_gateway,
+    // dana sudah di akun Storo dan ditangani via sales ledger (cron credit +
+    // disbursement debit), bukan wallet.
+    if (store?.billing_model === "own_prepaid") {
       try {
         await deductOpsFeeForOrder(order.store_id, order.total, order.id);
       } catch (err) {

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getStoreForUser } from "@/lib/store/context";
 import { getWallet, getTransactions } from "@/lib/wallet";
 import {
@@ -9,7 +10,7 @@ import {
   formatIDR,
   formatDate,
 } from "@/components/dashboard/store/ui";
-import { Wallet, ArrowUpCircle, Info, TrendingDown, TrendingUp } from "lucide-react";
+import { Wallet, ArrowUpCircle, TrendingDown, TrendingUp } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,11 @@ export default async function WalletPage({
   const { storeId } = await params;
   const { store } = await getStoreForUser(storeId);
 
-  const isStoroGateway = store.billing_model === "storo_gateway";
+  // Wallet halaman ini khusus untuk mode own_prepaid.
+  // Mode storo_gateway pakai halaman /sales-balance.
+  if (store.billing_model !== "own_prepaid") {
+    redirect(`/dashboard/manage-store/${storeId}/sales-balance`);
+  }
 
   const [wallet, transactions] = await Promise.all([
     getWallet(storeId),
@@ -78,25 +83,6 @@ export default async function WalletPage({
         }
       />
 
-      {isStoroGateway ? (
-        <StoreCard className="mb-5">
-          <div className="flex items-start gap-3">
-            <Info className="size-5 text-blue-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-[#0F172A] mb-0.5">
-                Wallet hanya dibutuhkan untuk mode &ldquo;Own Prepaid&rdquo;
-              </p>
-              <p className="text-sm text-[#64748B]">
-                Toko Anda saat ini menggunakan <strong>Storo Gateway</strong>. Storo
-                mengelola pembayaran dan otomatis memotong 5% sebelum disbursement ke
-                Anda — tidak perlu top up wallet. Wallet diperlukan jika Anda beralih
-                ke mode <em>Own Prepaid</em> (payment gateway milik sendiri), di mana
-                Storo memotong 1% biaya operasional dari saldo wallet.
-              </p>
-            </div>
-          </div>
-        </StoreCard>
-      ) : null}
 
       {/* Balance Card */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">

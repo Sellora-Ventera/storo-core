@@ -29,7 +29,9 @@ import {
   Wallet,
   ChevronDown,
   ArrowLeft,
+  Coins,
 } from "lucide-react";
+import type { BillingModel } from "@/lib/store/context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +49,19 @@ type NavItem = {
   exact?: boolean;
 };
 
-function getNavGroups(basePath: string): { label: string; items: NavItem[] }[] {
+function getNavGroups(
+  basePath: string,
+  billingModel: BillingModel
+): { label: string; items: NavItem[] }[] {
+  const balanceItem: NavItem =
+    billingModel === "storo_gateway"
+      ? {
+          title: "Saldo Penjualan",
+          href: `${basePath}/sales-balance`,
+          icon: Coins,
+        }
+      : { title: "Wallet", href: `${basePath}/wallet`, icon: Wallet };
+
   return [
     {
       label: "Menu Utama",
@@ -74,7 +88,7 @@ function getNavGroups(basePath: string): { label: string; items: NavItem[] }[] {
     {
       label: "Lainnya",
       items: [
-        { title: "Wallet", href: `${basePath}/wallet`, icon: Wallet },
+        balanceItem,
         { title: "Pengaturan", href: `${basePath}/settings`, icon: Settings },
       ],
     },
@@ -128,6 +142,7 @@ function SidebarBody({
   userEmail,
   userName,
   onLogout,
+  billingModel,
 }: {
   pathname: string;
   onItemClick?: () => void;
@@ -137,9 +152,10 @@ function SidebarBody({
   userEmail: string | null;
   userName: string | null;
   onLogout: () => void;
+  billingModel: BillingModel;
 }) {
   const basePath = `/dashboard/manage-store/${storeId}`;
-  const navGroups = getNavGroups(basePath);
+  const navGroups = getNavGroups(basePath, billingModel);
   const initials = (userName ?? userEmail ?? "U")
     .split(" ")
     .map((n) => n[0])
@@ -278,10 +294,12 @@ export default function StoreSidebar({
   storeId,
   stores,
   storefrontUrl,
+  billingModel,
 }: {
   storeId: string;
   stores: StoreSummary[];
   storefrontUrl?: string | null;
+  billingModel: BillingModel;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -323,6 +341,7 @@ export default function StoreSidebar({
           userEmail={userEmail}
           userName={userName}
           onLogout={handleLogout}
+          billingModel={billingModel}
         />
       </aside>
 
@@ -374,6 +393,7 @@ export default function StoreSidebar({
               userEmail={userEmail}
               userName={userName}
               onLogout={handleLogout}
+              billingModel={billingModel}
               onItemClick={() => setMobileOpen(false)}
             />
           </div>
