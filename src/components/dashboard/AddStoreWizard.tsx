@@ -59,6 +59,9 @@ export interface AddStoreWizardProps {
   userEmail: string;
   discountPercent?: number;
   referralCode?: string | null;
+  /** Cookie-prefilled referral code untuk user yang baru klik link /r/<code>.
+   *  Hanya dipakai kalau `referralCode` (existing attribution) null. */
+  prefilledReferralCode?: string | null;
 }
 
 export default function AddStoreWizard({
@@ -66,6 +69,7 @@ export default function AddStoreWizard({
   userEmail,
   discountPercent = 0,
   referralCode = null,
+  prefilledReferralCode = null,
 }: AddStoreWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -150,6 +154,7 @@ export default function AddStoreWizard({
           userEmail={userEmail}
           discountPercent={discountPercent}
           referralCode={referralCode}
+          prefilledReferralCode={prefilledReferralCode}
           onPrev={goPrev}
           onCancel={() => router.push("/dashboard/stores")}
         />
@@ -611,6 +616,7 @@ function Step3Summary({
   userEmail,
   discountPercent: initialDiscountPercent,
   referralCode: initialReferralCode,
+  prefilledReferralCode,
   onPrev,
   onCancel,
 }: {
@@ -622,6 +628,7 @@ function Step3Summary({
   userEmail: string;
   discountPercent: number;
   referralCode: string | null;
+  prefilledReferralCode: string | null;
   onPrev: () => void;
   onCancel: () => void;
 }) {
@@ -632,9 +639,10 @@ function Step3Summary({
   // Referral code state. If the user already has an attribution from a prior
   // signup (`initialReferralCode` from the server), it's locked — UI shows
   // the code as readonly. If they don't, expose an optional input so they
-  // can claim a code at add-store time.
+  // can claim a code at add-store time. Cookie-prefilled value (from a recent
+  // /r/<code> visit) auto-populates the input — user can still edit it.
   const isLocked = Boolean(initialReferralCode);
-  const [codeInput, setCodeInput] = useState("");
+  const [codeInput, setCodeInput] = useState(prefilledReferralCode ?? "");
   const [codeStatus, setCodeStatus] = useState<
     | { kind: "idle" }
     | { kind: "checking" }
