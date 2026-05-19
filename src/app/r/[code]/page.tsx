@@ -250,9 +250,13 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
                 </div>
               )}
 
-              {/* CTA */}
+              {/* CTA — referral visitors clearly intend to buy, route them
+                * straight to the onboarding wizard (account + first store +
+                * payment in one flow) instead of the bare /sign-up page that
+                * would leave them in an empty dashboard wondering "now what".
+                */}
               <Link
-                href="/sign-up"
+                href="/onboarding"
                 className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/90 active:bg-primary/80 text-white font-semibold text-base py-3.5 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-primary/25 hover:shadow-primary/40 group"
               >
                 Daftar Sekarang
