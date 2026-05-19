@@ -83,24 +83,8 @@ export async function POST(request: Request) {
 
     const slug = slugify(storeName?.trim() || websiteName.trim());
 
-    const { error: requestError } = await supabase
-      .from("onboarding_requests")
-      .insert({
-        client_id: client.id,
-        plan: planId,
-        template_name: "modern",
-        requested_slug: slug,
-        custom_domain: customDomain?.trim() || null,
-        status: "pending",
-      });
-
-    if (requestError) {
-      console.error("[dashboard/stores] Onboarding request error:", requestError);
-      return NextResponse.json(
-        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
-        { status: 500 }
-      );
-    }
+    // NOTE: onboarding_request inserted AFTER invoice (below) so we can link
+    // them via invoice_id. Order swap migration 20260520000008.
 
     // Resolve diskon referral. Dua sumber:
     //   1. body.referralCode (opsional) — user input dari Step 3 Summary form,
@@ -189,6 +173,29 @@ export async function POST(request: Request) {
     if (invoiceError || !invoice) {
       console.error("[dashboard/stores] Invoice insert error:", invoiceError);
       return NextResponse.json({ error: "Gagal membuat invoice." }, { status: 500 });
+    }
+
+    // Insert onboarding_request linked to the invoice. If this fails after
+    // the invoice was created, the invoice becomes orphan — acceptable; admin
+    // can clean up, and the user just sees a checkout error and can retry.
+    const { error: requestError } = await supabase
+      .from("onboarding_requests")
+      .insert({
+        client_id: client.id,
+        plan: planId,
+        template_name: "modern",
+        requested_slug: slug,
+        custom_domain: customDomain?.trim() || null,
+        status: "pending",
+        invoice_id: invoice.id,
+      });
+
+    if (requestError) {
+      console.error("[dashboard/stores] Onboarding request error:", requestError);
+      return NextResponse.json(
+        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
+        { status: 500 },
+      );
     }
 
     await supabase.from("onboarding_leads").insert({

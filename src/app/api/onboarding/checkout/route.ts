@@ -256,24 +256,9 @@ export async function POST(request: NextRequest) {
     // ── Create onboarding request ─────────────────────────────────
     // Fatal: if this fails the user has nothing to show in their dashboard
     // after paying. Better to surface the error before the invoice is created.
-    const { error: requestError } = await supabase
-      .from("onboarding_requests")
-      .insert({
-        client_id: client.id,
-        plan: planId,
-        template_name: "modern", // default template, changed by engineer later
-        requested_slug: slug,
-        custom_domain: customDomain?.trim() || null,
-        status: "pending",
-      });
-
-    if (requestError) {
-      console.error("[checkout] Onboarding request error:", requestError);
-      return NextResponse.json(
-        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
-        { status: 500 }
-      );
-    }
+    // NOTE: onboarding_request inserted AFTER invoice (below) so we can link
+    // them via invoice_id (migration 20260520000008). Dashboard filters by
+    // invoice.status='paid' so unpaid requests don't pollute "Status Onboarding".
 
     // ── Create invoice (with referral discount applied) ───────────
     const setupAmount = plan.setup;
@@ -314,6 +299,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Gagal membuat invoice. Coba lagi." },
         { status: 500 }
+      );
+    }
+
+    // Insert onboarding_request linked to invoice. Order swap means an orphan
+    // invoice is possible if THIS insert fails — acceptable; admin reconciles.
+    const { error: requestError } = await supabase
+      .from("onboarding_requests")
+      .insert({
+        client_id: client.id,
+        plan: planId,
+        template_name: "modern",
+        requested_slug: slug,
+        custom_domain: customDomain?.trim() || null,
+        status: "pending",
+        invoice_id: invoice.id,
+      });
+
+    if (requestError) {
+      console.error("[checkout] Onboarding request error:", requestError);
+      return NextResponse.json(
+        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
+        { status: 500 },
       );
     }
 
