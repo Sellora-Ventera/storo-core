@@ -35,11 +35,13 @@ export async function POST(request: Request) {
       websiteName,
       customDomain,
       storeName,
+      referralCode: bodyReferralCode,
     } = body as {
       plan?: string;
       websiteName?: string;
       customDomain?: string;
       storeName?: string;
+      referralCode?: string;
     };
 
     if (!planId?.trim()) {
@@ -99,14 +101,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Resolve diskon referral kalau client ini di-refer oleh seseorang.
-    // Dihitung di server (jangan trust client) — sumber kebenaran tetap di sini.
+    // Resolve diskon referral. Dua sumber:
+    //   1. body.referralCode (opsional) — user input dari Step 3 Summary form,
+    //      buat existing user yang belum pernah ke-attribute mau klaim kode.
+    //      Kalau valid + client.referred_by_code masih null → simpan
+    //      (first-attribution-wins) supaya add-store berikutnya nggak perlu
+    //      input ulang.
+    //   2. client.referred_by_code yang sudah ada di DB (fallback).
+    //
+    // Body wins HANYA kalau client belum punya attribution; kalau client sudah
+    // punya code lama, code lama yang dipakai (tidak bisa di-override lewat UI).
+    const normalizedBodyCode =
+      typeof bodyReferralCode === "string" ? bodyReferralCode.trim() : "";
+    const effectiveReferralCode =
+      (client.referred_by_code as string | null) ||
+      (normalizedBodyCode || null);
+
     let discountPercent = 0;
-    if (client.referred_by_code) {
+    if (effectiveReferralCode) {
       const { data: referrer } = await supabase
         .from("clients")
         .select("id")
-        .eq("own_referral_code", client.referred_by_code)
+        .eq("own_referral_code", effectiveReferralCode)
         .maybeSingle();
 
       if (referrer) {
@@ -121,6 +137,16 @@ export async function POST(request: Request) {
           ?? (requests ?? []).find((r) => r.status !== "rejected");
         if (liveOrPending?.plan) {
           discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+        }
+
+        // Persist body-provided code so future add-store doesn't need re-entry.
+        // Guard: only set if NULL (don't overwrite earlier attribution).
+        if (normalizedBodyCode && !client.referred_by_code) {
+          await supabase
+            .from("clients")
+            .update({ referred_by_code: normalizedBodyCode })
+            .eq("id", client.id)
+            .is("referred_by_code", null);
         }
       }
     }
@@ -146,6 +172,15 @@ export async function POST(request: Request) {
           .toISOString()
           .split("T")[0],
         provider: "xendit",
+        // Audit trail — same shape as onboarding/checkout. Finance can reconcile
+        // and Sharelink purchase event (from xendit webhook) reads `plan` from here.
+        metadata: {
+          plan: planId,
+          plan_setup: setupAmount,
+          referral_code: effectiveReferralCode,
+          discount_percent: discountPercent,
+          discount_amount: discountAmount,
+        },
       })
       .select("id")
       .single();

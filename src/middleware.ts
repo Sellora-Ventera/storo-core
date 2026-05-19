@@ -11,11 +11,16 @@ export async function middleware(request: NextRequest) {
   // (https://storo.id/?code=...) instead of the redirectTo we pass — happens
   // when /auth/callback isn't in the "Redirect URLs" allowlist. Forward to the
   // callback route so the code gets exchanged for a session.
+  //
+  // Excluding /api/* is critical: several internal endpoints legitimately use
+  // `?code=<referral_code>` as a query param (e.g. /api/referral/preview-discount).
+  // Without this exclusion they get 307-redirected to /auth/callback and never
+  // execute — silently breaking discount preview UI.
   const code = searchParams.get("code");
   if (
     code &&
     !pathname.startsWith("/auth/callback") &&
-    !pathname.startsWith("/api/auth/callback") &&
+    !pathname.startsWith("/api/") &&
     !pathname.startsWith("/payment/") // payment/* uses its own ?code-like params
   ) {
     const url = request.nextUrl.clone();

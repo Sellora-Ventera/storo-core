@@ -609,8 +609,8 @@ function Step3Summary({
   storeName,
   client,
   userEmail,
-  discountPercent,
-  referralCode,
+  discountPercent: initialDiscountPercent,
+  referralCode: initialReferralCode,
   onPrev,
   onCancel,
 }: {
@@ -629,10 +629,76 @@ function Step3Summary({
   const [apiError, setApiError] = useState<string | null>(null);
   const [manualInvoiceId, setManualInvoiceId] = useState<string | null>(null);
 
+  // Referral code state. If the user already has an attribution from a prior
+  // signup (`initialReferralCode` from the server), it's locked — UI shows
+  // the code as readonly. If they don't, expose an optional input so they
+  // can claim a code at add-store time.
+  const isLocked = Boolean(initialReferralCode);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeStatus, setCodeStatus] = useState<
+    | { kind: "idle" }
+    | { kind: "checking" }
+    | { kind: "valid"; percent: number; referrerName?: string }
+    | { kind: "invalid"; reason: string }
+  >({ kind: "idle" });
+
+  // Effective values used for display + payment. Server stays the source of
+  // truth — these are mirrored for UI only. If user types a code AND it
+  // validates, prefer that over the (zero) initial discount.
+  const effectiveReferralCode = isLocked
+    ? initialReferralCode!
+    : codeStatus.kind === "valid"
+      ? codeInput.trim()
+      : null;
+  const effectiveDiscountPercent = isLocked
+    ? initialDiscountPercent
+    : codeStatus.kind === "valid"
+      ? codeStatus.percent
+      : 0;
+
+  // Debounced validation — fetch /api/referral/preview-discount when the user
+  // types a code (only when input is unlocked).
+  useEffect(() => {
+    if (isLocked) return;
+    const trimmed = codeInput.trim();
+    if (!trimmed) {
+      setCodeStatus({ kind: "idle" });
+      return;
+    }
+    setCodeStatus({ kind: "checking" });
+    const handle = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/referral/preview-discount?code=${encodeURIComponent(trimmed)}`,
+        );
+        if (!res.ok) {
+          setCodeStatus({ kind: "invalid", reason: "Server error" });
+          return;
+        }
+        const data = await res.json();
+        if (!data?.valid) {
+          setCodeStatus({ kind: "invalid", reason: "Kode tidak ditemukan" });
+          return;
+        }
+        setCodeStatus({
+          kind: "valid",
+          percent:
+            typeof data.discountPercent === "number" ? data.discountPercent : 0,
+          referrerName: data.referrerName ?? undefined,
+        });
+      } catch {
+        setCodeStatus({ kind: "invalid", reason: "Gagal menghubungi server" });
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [codeInput, isLocked]);
+
   const planObj = getPlan(plan);
   const setupFee = planObj?.setup ?? 0;
   const discountAmount =
-    discountPercent > 0 ? Math.round((setupFee * discountPercent) / 100) : 0;
+    effectiveDiscountPercent > 0
+      ? Math.round((setupFee * effectiveDiscountPercent) / 100)
+      : 0;
   const total = setupFee - discountAmount;
   const isSubdomain = selectedDomain.endsWith(".storo.id");
   const customDomainForApi = isSubdomain ? undefined : selectedDomain;
@@ -651,6 +717,13 @@ function Step3Summary({
           websiteName,
           customDomain: customDomainForApi,
           storeName: storeName || undefined,
+          // Only send code if user typed a new one and it validated. If they
+          // already had attribution (isLocked), backend reads from DB — don't
+          // need to send.
+          referralCode:
+            !isLocked && codeStatus.kind === "valid"
+              ? codeInput.trim()
+              : undefined,
         }),
       });
 
@@ -715,7 +788,7 @@ function Step3Summary({
             {discountAmount > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-sm text-green-700">
-                  Diskon Referral {discountPercent}%
+                  Diskon Referral {effectiveDiscountPercent}%
                 </span>
                 <span className="text-sm font-semibold text-green-700">
                   −{formatIDR(discountAmount)}
@@ -733,13 +806,51 @@ function Step3Summary({
         </div>
       </div>
 
-      {referralCode && discountAmount > 0 && (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mt-4">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>
-            Diskon {discountPercent}% diterapkan dari kode referral{" "}
-            <strong>{referralCode}</strong>
-          </span>
+      {/* Referral code: locked banner (existing attribution) or input field */}
+      {isLocked ? (
+        discountAmount > 0 && (
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mt-4">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>
+              Diskon {effectiveDiscountPercent}% diterapkan dari kode referral{" "}
+              <strong>{effectiveReferralCode}</strong>
+            </span>
+          </div>
+        )
+      ) : (
+        <div className="mt-4">
+          <Label htmlFor="referralCodeInput" className="text-xs text-gray-500">
+            Punya kode referral? <span className="text-gray-400">(opsional)</span>
+          </Label>
+          <Input
+            id="referralCodeInput"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+            placeholder="Misal: ADMSELLORA5K26"
+            className="h-10 mt-1 font-mono uppercase text-sm"
+            disabled={loading}
+            maxLength={50}
+          />
+          {codeStatus.kind === "checking" && (
+            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Mengecek kode…
+            </p>
+          )}
+          {codeStatus.kind === "valid" && (
+            <p className="text-xs text-green-700 mt-1.5 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3 h-3" />
+              Diskon {codeStatus.percent}% dari{" "}
+              <strong>{codeStatus.referrerName ?? "referrer"}</strong>{" "}
+              diterapkan.
+            </p>
+          )}
+          {codeStatus.kind === "invalid" && (
+            <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1.5">
+              <AlertCircle className="w-3 h-3" />
+              {codeStatus.reason}
+            </p>
+          )}
         </div>
       )}
 
