@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     const invoiceUuid = external_id.replace("STORO-INV-", "");
     const { data } = await supabase
       .from("invoices")
-      .select("id, status, client_id, metadata")
+      .select("id, status, client_id, type, amount, metadata")
       .eq("id", invoiceUuid)
       .maybeSingle();
     if (data) {
@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
   if (!invoice && invoice_id) {
     const { data } = await supabase
       .from("invoices")
-      .select("id, status, client_id, metadata")
+      .select("id, status, client_id, type, amount, metadata")
       .eq("provider_ref", invoice_id)
       .maybeSingle();
     if (data) {
@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
   if (!invoice && invoice_id) {
     const { data } = await supabase
       .from("invoices")
-      .select("id, status, client_id, metadata")
+      .select("id, status, client_id, type, amount, metadata")
       .filter("metadata->>xendit_invoice_id", "eq", invoice_id)
       .maybeSingle();
     if (data) {
@@ -170,6 +170,119 @@ Deno.serve(async (req: Request) => {
       });
     if (notifError) {
       console.warn("Notification insert failed:", notifError.message);
+    }
+  }
+
+  // --- Fire Sharelink purchase event (if referee was attributed) ---------
+  // Mirrors the logic that lives in store-core/src/lib/sharelink/fire-purchase-event.ts
+  // — but inlined here because the gateway routes Xendit callbacks to THIS
+  // edge function, not to /api/webhooks/xendit. Without this firing, no
+  // referrer reward is ever created when a referee pays.
+  //
+  // Best-effort: any failure is logged but doesn't block the response. Invoice
+  // is already marked paid, that's the critical state mutation. Sharelink
+  // dedupes on (code, referee_id, event_type), so retries are safe.
+  if (invoice.client_id && invoice.type === "setup") {
+    const sharelinkBase = Deno.env.get("SHARELINK_BASE_URL");
+    const sharelinkKey = Deno.env.get("SHARELINK_SECRET_KEY");
+
+    if (!sharelinkBase || !sharelinkKey) {
+      console.warn(
+        "[storo-payment-confirm] Sharelink env vars missing (SHARELINK_BASE_URL / SHARELINK_SECRET_KEY) — purchase event skipped",
+      );
+    } else {
+      try {
+        // Lookup referee's attribution + their auth user (for refereeEmail)
+        const { data: refereeClient } = await supabase
+          .from("clients")
+          .select("user_id, full_name, referred_by_code")
+          .eq("id", invoice.client_id as string)
+          .maybeSingle();
+
+        if (!refereeClient?.referred_by_code) {
+          console.log(
+            "[storo-payment-confirm] No referrer attribution — purchase event skipped",
+          );
+        } else {
+          const refereeUserId = refereeClient.user_id as string | null;
+          let refereeEmail: string | undefined;
+          if (refereeUserId) {
+            const { data: refereeAuth } = await supabase.auth.admin.getUserById(
+              refereeUserId,
+            );
+            refereeEmail = refereeAuth?.user?.email ?? undefined;
+          }
+
+          // Use invoice metadata for plan if set (from /api/dashboard/stores or
+          // /api/onboarding/checkout); fallback to latest onboarding_request
+          const meta = (invoice.metadata ?? {}) as Record<string, unknown>;
+          let invoicePlan: string | null = (meta.plan as string | undefined) ?? null;
+          if (!invoicePlan) {
+            const { data: req } = await supabase
+              .from("onboarding_requests")
+              .select("plan")
+              .eq("client_id", invoice.client_id as string)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            invoicePlan = (req?.plan as string | undefined) ?? null;
+          }
+
+          const eventRes = await fetch(
+            `${sharelinkBase.replace(/\/+$/, "")}/api/v1/events`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${sharelinkKey}`,
+              },
+              body: JSON.stringify({
+                referralCode: refereeClient.referred_by_code,
+                eventType: "purchase",
+                eventName: `gateway_inv_${invoice.id}`,
+                refereeId: refereeUserId ?? (invoice.client_id as string),
+                refereeEmail,
+                refereeName: refereeClient.full_name ?? undefined,
+                metadata: {
+                  source: "storo_payment_confirm_edge",
+                  invoice_id: invoice.id,
+                  amount_paid: amount,
+                  plan: invoicePlan,
+                  referral_code: refereeClient.referred_by_code,
+                },
+              }),
+              signal: AbortSignal.timeout(10_000),
+            },
+          );
+
+          const respBody = await eventRes.json().catch(() => ({}));
+          if (!eventRes.ok) {
+            const msg =
+              ((respBody as Record<string, unknown>).message as string) ??
+              `HTTP ${eventRes.status}`;
+            // Duplicate event = idempotent retry, expected — not a real failure
+            if (!msg.includes("Duplicate event")) {
+              console.warn(
+                "[storo-payment-confirm] Sharelink purchase event failed:",
+                msg,
+              );
+            } else {
+              console.log("[storo-payment-confirm] Purchase event already recorded (dedupe)");
+            }
+          } else {
+            const rewards =
+              ((respBody as Record<string, unknown>).data as Record<string, unknown> | undefined)
+                ?.rewards;
+            console.log(
+              "[storo-payment-confirm] Sharelink purchase event fired, rewards:",
+              Array.isArray(rewards) ? rewards.length : 0,
+            );
+          }
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[storo-payment-confirm] Sharelink purchase event exception:", msg);
+      }
     }
   }
 
