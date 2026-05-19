@@ -25,18 +25,22 @@ export async function GET() {
   const envBaseUrl = Boolean(process.env.SHARELINK_BASE_URL);
   const envSecretKey = Boolean(process.env.SHARELINK_SECRET_KEY);
   const envTenantId = Boolean(process.env.SHARELINK_TENANT_ID);
+  // Xendit webhook token — required by /api/webhooks/xendit handler.
+  // Missing this in prod → Xendit webhook callback gets 401 "Unauthorized".
+  const envXenditWebhookToken = Boolean(process.env.XENDIT_WEBHOOK_TOKEN);
 
   const result: {
     envBaseUrl: boolean;
     envSecretKey: boolean;
     envTenantId: boolean;
+    envXenditWebhookToken: boolean;
     ping?: {
       ok: boolean;
       status?: number;
       error?: string;
       body?: unknown;
     };
-  } = { envBaseUrl, envSecretKey, envTenantId };
+  } = { envBaseUrl, envSecretKey, envTenantId, envXenditWebhookToken };
 
   if (!envBaseUrl || !envSecretKey) {
     result.ping = {
