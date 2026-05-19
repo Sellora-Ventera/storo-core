@@ -1000,9 +1000,40 @@ function Step5Summary({
 }) {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [discountPercent, setDiscountPercent] = useState(0);
 
   const plan = getPlan(state.plan);
-  const total = plan?.setup ?? 0;
+  const setupFee = plan?.setup ?? 0;
+  const discountAmount =
+    discountPercent > 0 ? Math.round((setupFee * discountPercent) / 100) : 0;
+  const total = setupFee - discountAmount;
+
+  // Resolve the actual discount % from the referrer's active plan so the
+  // Summary doesn't mislead the user (it used to display setupFee verbatim
+  // while the backend silently applied the discount, making it look like
+  // discount wasn't working). Server-side stays the source of truth — this
+  // is for display only.
+  useEffect(() => {
+    if (!referralCode) {
+      setDiscountPercent(0);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/referral/preview-discount?code=${encodeURIComponent(referralCode)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.valid) return;
+        if (typeof data.discountPercent === "number") {
+          setDiscountPercent(data.discountPercent);
+        }
+      })
+      .catch(() => {
+        // Silent — UI will just show full price, backend still applies discount
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [referralCode]);
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -1122,6 +1153,16 @@ function Step5Summary({
                 <span className="text-sm font-semibold text-green-600">Gratis</span>
               </div>
             )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">
+                  Diskon Referral {discountPercent}%
+                </span>
+                <span className="text-sm font-semibold text-green-700">
+                  −{formatIDR(discountAmount)}
+                </span>
+              </div>
+            )}
           </>
         )}
 
@@ -1136,7 +1177,11 @@ function Step5Summary({
       {referralCode && (
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mt-4">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          <span>Kode referral <strong>{referralCode}</strong> aktif</span>
+          <span>
+            {discountAmount > 0
+              ? <>Diskon {discountPercent}% diterapkan dari kode referral <strong>{referralCode}</strong></>
+              : <>Kode referral <strong>{referralCode}</strong> aktif</>}
+          </span>
         </div>
       )}
 

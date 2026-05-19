@@ -12,6 +12,7 @@ import {
   Banknote,
   Tag,
   Layers,
+  Gift,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/superadmin/disbursements", label: "Disbursement", icon: Banknote },
   { href: "/superadmin/pricing", label: "Pricing & Plans", icon: Tag },
   { href: "/superadmin/templates", label: "Template Gallery", icon: Layers },
+  { href: "/superadmin/referrals", label: "Referral Program", icon: Gift },
   { href: "/superadmin/settings", label: "Pengaturan", icon: Settings },
 ];
 

@@ -1,9 +1,66 @@
-import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ArrowRight, Gift } from "lucide-react";
+import { CheckCircle2, ArrowRight, Gift, Tag } from "lucide-react";
 import storoLogo from "@/assets/storo-logo.png";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { getDiscountPercentForPlan, getPlan } from "@/lib/plans";
+
+const CLICK_PING_VERSION = "v2";
+
+/**
+ * Ping Sharelink's public click endpoint to bump `metadata.clicks`.
+ *
+ * Why inline-await (vs `after()`): we lost a day debugging an `after()`-based
+ * version that fired silently. Inline awaiting lets us:
+ *   1. Surface ping status via the rendered HTML (hidden marker div), so we
+ *      can verify end-to-end from `curl` without SSH.
+ *   2. Catch DNS round-robin to the wrong A record (sharelink.id had Vercel
+ *      + new server IPs both live during DNS migration) — we retry once.
+ *
+ * Latency cost: ~50-300ms (parallelized with the Supabase personalization
+ * fetch via `Promise.all` below, so no added wall-clock time).
+ *
+ * Env precedence: SHARELINK_INTERNAL_BASE_URL > SHARELINK_BASE_URL. Use the
+ * internal one when Storo + Sharelink share a host (e.g. http://localhost:3000)
+ * to bypass DNS entirely.
+ */
+async function pingClickCounter(code: string): Promise<string> {
+  const base =
+    process.env.SHARELINK_INTERNAL_BASE_URL ||
+    process.env.SHARELINK_BASE_URL;
+  if (!base) return "skipped-noenv";
+  if (!code || code.length > 50) return "skipped-badcode";
+
+  const url = `${base.replace(/\/+$/, "")}/api/public/codes/${encodeURIComponent(code)}/click`;
+
+  async function attempt(): Promise<Response> {
+    return fetch(url, {
+      method: "POST",
+      signal: AbortSignal.timeout(3000),
+      cache: "no-store",
+    });
+  }
+
+  try {
+    let res = await attempt();
+    // Retry once on 404 — covers DNS round-robin where the first lookup
+    // hit a stale A record (e.g. Vercel) that doesn't have the route.
+    if (res.status === 404) {
+      res = await attempt();
+    }
+    if (!res.ok) return `http-${res.status}`;
+    const body = (await res.json().catch(() => ({}))) as {
+      tracked?: boolean;
+      clicks?: number;
+      reason?: string;
+    };
+    if (body.tracked) return `ok-${body.clicks ?? "?"}`;
+    return `notfound-${body.reason ?? "unknown"}`;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    return `err-${msg.substring(0, 40)}`;
+  }
+}
 
 interface ReferralPageProps {
   params: Promise<{ code: string }>;
@@ -22,29 +79,50 @@ export async function generateMetadata({ params }: ReferralPageProps) {
 export default async function ReferralPage({ params }: ReferralPageProps) {
   const { code } = await params;
 
-  // Set referral cookie (server-side, 30 days)
-  const cookieStore = await cookies();
-  cookieStore.set("storo_referral_code", code, {
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-    sameSite: "lax",
-  });
+  // Cookie `storo_referral_code` di-set oleh middleware (src/middleware.ts).
+  // Next.js 15 melarang cookies().set() di dalam Server Component, jadi tugas
+  // itu pindah ke middleware. Jangan tambahkan cookieStore.set() di sini.
 
-  // Fetch referrer name from Supabase
+  // Run click ping in parallel with personalization fetch — no added latency.
   let referrerName: string | null = null;
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase
-      .from("clients")
-      .select("full_name, store_name")
-      .eq("referral_code", code)
-      .single();
-    if (data) {
-      referrerName = data.full_name || data.store_name || null;
+  let discountPercent = 0;
+  let referrerPlanName: string | null = null;
+
+  const personalizationTask = (async () => {
+    try {
+      const supabase = await createSupabaseServiceClient();
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id, full_name")
+        .eq("own_referral_code", code)
+        .maybeSingle();
+
+      if (client) {
+        referrerName = client.full_name || null;
+
+        const { data: requests } = await supabase
+          .from("onboarding_requests")
+          .select("plan, status")
+          .eq("client_id", client.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        const liveOrPending = (requests ?? []).find((r) => r.status === "live")
+          ?? (requests ?? []).find((r) => r.status !== "rejected");
+        if (liveOrPending?.plan) {
+          discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+          referrerPlanName = getPlan(liveOrPending.plan)?.name ?? null;
+        }
+      }
+    } catch {
+      // Silently fail — generic message will be shown
     }
-  } catch {
-    // Silently fail — generic message will be shown
-  }
+  })();
+
+  const [, clickPingStatus] = await Promise.all([
+    personalizationTask,
+    pingClickCounter(code),
+  ]);
 
   const benefits = [
     "Import produk dari Shopee otomatis",
@@ -55,6 +133,15 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
 
   return (
     <>
+      {/* Hidden marker so we can verify the ping flow externally via curl
+       * without needing SSH. `grep data-click-ping` on the response HTML —
+       * value tells us exactly what happened on the server. */}
+      <div
+        data-click-ping={clickPingStatus}
+        data-click-ping-version={CLICK_PING_VERSION}
+        style={{ display: "none" }}
+      />
+
       {/* sessionStorage script — ensures sign-up page picks up referral code */}
       <script
         dangerouslySetInnerHTML={{
@@ -134,7 +221,7 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
               </ul>
 
               {/* Referral code display */}
-              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-6 flex items-center justify-between">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-3 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500 mb-0.5">Kode referral Anda</p>
                   <p className="font-mono font-bold text-primary tracking-widest text-sm">{code}</p>
@@ -144,9 +231,32 @@ export default async function ReferralPage({ params }: ReferralPageProps) {
                 </span>
               </div>
 
-              {/* CTA */}
+              {/* Discount tier badge — only if referrer has an active plan */}
+              {discountPercent > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                  <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Tag className="w-4 h-4 text-green-700" />
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-semibold text-green-900">
+                      Diskon {discountPercent}% setup fee
+                    </p>
+                    {referrerPlanName && (
+                      <p className="text-green-700 text-xs">
+                        Berlaku karena referrer Anda berlangganan paket {referrerPlanName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CTA — referral visitors clearly intend to buy, route them
+                * straight to the onboarding wizard (account + first store +
+                * payment in one flow) instead of the bare /sign-up page that
+                * would leave them in an empty dashboard wondering "now what".
+                */}
               <Link
-                href="/sign-up"
+                href="/onboarding"
                 className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/90 active:bg-primary/80 text-white font-semibold text-base py-3.5 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-primary/25 hover:shadow-primary/40 group"
               >
                 Daftar Sekarang

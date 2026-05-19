@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Gift,
@@ -13,20 +12,34 @@ import {
   MessageCircle,
   Clock,
   AlertCircle,
+  PauseCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface ReferralReward {
   id: string;
   amount: number;
+  currency: string;
   status: string;
   created_at: string;
+  hold_until: string | null;
+  level: 1 | 2;
+}
+
+interface MyDataResponse {
+  ownCode: string | null;
+  ownLink: string | null;
+  defaultRewardIDR: number;
+  rewards: ReferralReward[];
+  stats: { totalReferred: number; totalEarnedIDR: number };
 }
 
 const REWARD_STATUS_CONFIG = {
   pending: { label: "Menunggu", color: "bg-yellow-100 text-yellow-700", icon: Clock },
+  held: { label: "Ditahan", color: "bg-orange-100 text-orange-700", icon: PauseCircle },
   approved: { label: "Disetujui", color: "bg-blue-100 text-blue-700", icon: CheckCircle2 },
   distributed: { label: "Dibayarkan", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
+  clawed_back: { label: "Dibatalkan", color: "bg-red-100 text-red-700", icon: AlertCircle },
+  failed: { label: "Gagal", color: "bg-red-100 text-red-700", icon: AlertCircle },
 } as const;
 
 function formatIDR(amount: number) {
@@ -38,68 +51,37 @@ function formatIDR(amount: number) {
 }
 
 export default function ReferralPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [referralCode, setReferralCode] = useState<string | null>(null);
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [rewards, setRewards] = useState<ReferralReward[]>([]);
-  const [totalReferred, setTotalReferred] = useState(0);
-  const [totalEarned, setTotalEarned] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<MyDataResponse | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const fetchReferralData = useCallback(async (cid: string, code: string | null) => {
-    const supabase = getSupabaseBrowserClient();
-
-    // Fetch rewards
-    const { data: rewardsData } = await supabase
-      .from("referral_rewards")
-      .select("id, amount, status, created_at")
-      .eq("client_id", cid)
-      .order("created_at", { ascending: false });
-
-    setRewards(rewardsData ?? []);
-    setTotalEarned(
-      (rewardsData ?? []).reduce((sum: number, r: ReferralReward) => sum + (r.amount ?? 0), 0)
-    );
-
-    // Count referred clients
-    if (code) {
-      const { count } = await supabase
-        .from("clients")
-        .select("id", { count: "exact", head: true })
-        .eq("referred_by", cid);
-      setTotalReferred(count ?? 0);
-    }
-  }, []);
-
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-
-    async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/sign-in");
-        return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/referral/my-data");
+        if (res.status === 401) {
+          window.location.href = "/sign-in";
+          return;
+        }
+        if (!res.ok) {
+          throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as MyDataResponse;
+        if (!cancelled) setData(json);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Gagal memuat data");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const { data: client } = await supabase
-        .from("clients")
-        .select("id, referral_code")
-        .eq("user_id", user.id)
-        .single();
-
-      if (client) {
-        setClientId(client.id);
-        setReferralCode(client.referral_code ?? null);
-        await fetchReferralData(client.id, client.referral_code ?? null);
-      }
-
-      setLoading(false);
     }
-
-    init();
-  }, [router, fetchReferralData]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const copyToClipboard = async (text: string, type: "code" | "link") => {
     await navigator.clipboard.writeText(text);
@@ -112,8 +94,6 @@ export default function ReferralPage() {
     }
   };
 
-  const referralLink = referralCode ? `https://storo.id/r/${referralCode}` : null;
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto flex items-center justify-center py-24">
@@ -121,6 +101,13 @@ export default function ReferralPage() {
       </div>
     );
   }
+
+  const referralCode = data?.ownCode ?? null;
+  const referralLink = data?.ownLink ?? null;
+  const defaultReward = data?.defaultRewardIDR ?? 100000;
+  const totalReferred = data?.stats.totalReferred ?? 0;
+  const totalEarned = data?.stats.totalEarnedIDR ?? 0;
+  const rewards = data?.rewards ?? [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -139,21 +126,34 @@ export default function ReferralPage() {
           <p className="font-semibold text-gray-900 text-sm mb-0.5">Komisi Referral</p>
           <p className="text-gray-600 text-sm">
             Dapatkan komisi{" "}
-            <span className="font-bold text-primary">Rp 250.000</span> setiap kali teman
-            Anda mendaftar dan tokonya aktif.
+            <span className="font-bold text-primary">{formatIDR(defaultReward)}</span>{" "}
+            setiap kali teman Anda mendaftar dan membayar invoice pertama. Maksimal komisi
+            per bulan = harga paket aktif Anda.
           </p>
         </div>
       </div>
 
-      {/* No referral code */}
-      {!referralCode && (
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-red-700">
+            <p className="font-semibold mb-1">Gagal memuat data referral</p>
+            <p>{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* No referral code — provisioning failed */}
+      {!loading && !error && !referralCode && (
         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm text-center">
           <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h2 className="text-base font-semibold text-gray-900 mb-2">
             Referral code sedang diproses
           </h2>
           <p className="text-gray-500 text-sm mb-5 max-w-sm mx-auto">
-            Referral code Anda sedang diproses. Hubungi tim kami untuk informasi lebih lanjut.
+            Referral code Anda sedang diproses. Coba refresh halaman ini, atau hubungi tim
+            kami untuk informasi lebih lanjut.
           </p>
           <a
             href="https://wa.me/6285157406969"
@@ -170,14 +170,13 @@ export default function ReferralPage() {
       {/* Referral code + link cards */}
       {referralCode && (
         <div className="grid sm:grid-cols-2 gap-4">
-          {/* Code card */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">
               Kode Referral Anda
             </p>
             <div className="flex items-center gap-3">
-              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                <span className="text-lg font-bold text-primary tracking-widest">
+              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 min-w-0">
+                <span className="text-sm font-bold text-primary tracking-widest leading-6 truncate block">
                   {referralCode}
                 </span>
               </div>
@@ -196,14 +195,13 @@ export default function ReferralPage() {
             </div>
           </div>
 
-          {/* Link card */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">
               Link Referral Anda
             </p>
             <div className="flex items-center gap-3">
               <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 min-w-0">
-                <span className="text-sm font-medium text-gray-700 truncate block">
+                <span className="text-sm font-medium text-gray-700 leading-6 truncate block">
                   {referralLink}
                 </span>
               </div>
@@ -230,7 +228,7 @@ export default function ReferralPage() {
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Users className="w-4.5 h-4.5 text-blue-600" />
+                <Users className="w-4 h-4 text-blue-600" />
               </div>
               <span className="text-xs text-gray-500 font-medium">Total Referral</span>
             </div>
@@ -241,7 +239,7 @@ export default function ReferralPage() {
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
-                <Coins className="w-4.5 h-4.5 text-green-600" />
+                <Coins className="w-4 h-4 text-green-600" />
               </div>
               <span className="text-xs text-gray-500 font-medium">Total Komisi</span>
             </div>

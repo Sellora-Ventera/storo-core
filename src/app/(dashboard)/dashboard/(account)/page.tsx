@@ -32,7 +32,12 @@ export default async function DashboardPage() {
     client
       ? supabase
           .from("onboarding_requests")
-          .select("id, status, store_url, plan, template_name, store_id, created_at, requested_slug, custom_domain, status_note")
+          .select(
+            // Nested select joins the linked invoice — relies on the FK
+            // added in migration 20260520000008. invoice_id is nullable so
+            // legacy rows (pre-migration) come back as { invoice: null }.
+            "id, status, store_url, plan, template_name, store_id, created_at, requested_slug, custom_domain, status_note, invoice_id, invoice:invoices(id, status, amount, metadata)",
+          )
           .eq("client_id", client.id)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
@@ -47,9 +52,44 @@ export default async function DashboardPage() {
       : Promise.resolve({ data: [] }),
   ]);
 
+  type RequestWithInvoice = {
+    id: string;
+    status: string;
+    store_url: string | null;
+    plan: string;
+    template_name: string | null;
+    store_id: string | null;
+    created_at: string;
+    requested_slug: string | null;
+    custom_domain: string | null;
+    status_note: string | null;
+    invoice_id: string | null;
+    // Supabase nested select returns either a single row or an array depending on FK shape.
+    invoice: {
+      id: string;
+      status: string;
+      amount: number;
+      metadata: Record<string, unknown> | null;
+    } | null;
+  };
+
+  const typedRequests = (requests ?? []) as unknown as RequestWithInvoice[];
+
   const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? "Kamu";
-  const liveStores = requests?.filter((r) => r.status === "live") ?? [];
-  const pendingStores = requests?.filter((r) => r.status !== "live") ?? [];
+  const liveStores = typedRequests.filter((r) => r.status === "live");
+
+  // Split pending requests by payment status of their linked invoice:
+  //   - paid OR no linked invoice (legacy row) → show in "Status Onboarding"
+  //     (admin will process)
+  //   - linked invoice still unpaid → show in "Tagihan Belum Dibayar" with
+  //     a pay button — user expected: "kalau belum bayar, jangan dianggap
+  //     tokonya udah jadi"
+  const pendingStoresPaid = typedRequests.filter(
+    (r) => r.status !== "live" && (!r.invoice_id || r.invoice?.status === "paid"),
+  );
+  const pendingStoresUnpaid = typedRequests.filter(
+    (r) => r.status !== "live" && r.invoice_id && r.invoice?.status !== "paid",
+  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -100,13 +140,77 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Pending stores */}
-      {pendingStores.length > 0 && (
+      {/* Unpaid invoices section — surface these prominently so users don't
+       *  re-create stores assuming the previous attempt was lost. */}
+      {pendingStoresUnpaid.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">
+            Tagihan Belum Dibayar
+          </h2>
+          {pendingStoresUnpaid.map((req) => {
+            const displayDomain =
+              req.custom_domain ??
+              (req.requested_slug ? `${req.requested_slug}.storo.id` : null);
+            const xenditUrl =
+              (req.invoice?.metadata as Record<string, unknown> | null)?.[
+                "xendit_invoice_url"
+              ] as string | undefined;
+            const amount = req.invoice?.amount ?? 0;
+            const amountIDR = new Intl.NumberFormat("id-ID", {
+              style: "currency",
+              currency: "IDR",
+              minimumFractionDigits: 0,
+            }).format(amount);
+
+            return (
+              <div
+                key={req.id}
+                className="bg-amber-50 border border-amber-200 rounded-2xl p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 capitalize">
+                    Paket {req.plan}
+                    {displayDomain ? ` — ${displayDomain}` : ""}
+                  </p>
+                  <p className="text-xs text-amber-800 mt-1">
+                    Selesaikan pembayaran <strong>{amountIDR}</strong> untuk
+                    melanjutkan onboarding toko.
+                  </p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  {xenditUrl ? (
+                    <a
+                      href={xenditUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 bg-amber-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors"
+                    >
+                      Bayar Sekarang
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  ) : (
+                    <Link
+                      href={`/dashboard/billing/${req.invoice_id}`}
+                      className="inline-flex items-center gap-1.5 bg-amber-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors"
+                    >
+                      Lihat Tagihan
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pending stores (paid only — admin processing) */}
+      {pendingStoresPaid.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             Status Onboarding
           </h2>
-          {pendingStores.map((req) => {
+          {pendingStoresPaid.map((req) => {
             const status = (req.status as StatusKey) ?? "pending";
             const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
             const Icon = config.icon;

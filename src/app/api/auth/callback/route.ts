@@ -18,6 +18,14 @@ export async function GET(request: Request) {
   const proto = forwardedProto || (host.startsWith("localhost") ? "http" : "https");
   const origin = `${proto}://${host}`;
 
+  // Surface OAuth provider errors directly (?error=access_denied etc. from
+  // Supabase/Google). Tanpa ini, user lihat generic "auth_callback_failed"
+  // padahal sebenarnya provider belum di-enable atau Redirect URL belum
+  // di-whitelist di Supabase Dashboard.
+  const providerError = searchParams.get("error");
+  const providerErrorDesc = searchParams.get("error_description");
+
+  let exchangeError: string | null = null;
   if (code) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -46,6 +54,8 @@ export async function GET(request: Request) {
       }
       return NextResponse.redirect(`${origin}${next}`);
     }
+    exchangeError = error.message;
+    console.warn("[auth/callback] exchangeCodeForSession failed:", error.message);
   }
 
   if (popup === "true") {
@@ -65,6 +75,23 @@ export async function GET(request: Request) {
     );
   }
 
-  // Fallback — redirect to sign-in on error
-  return NextResponse.redirect(`${origin}/sign-in?error=auth_callback_failed`);
+  // Fallback — redirect to sign-in dengan detail error kalau ada.
+  // Kalau muncul "auth_callback_failed" tanpa reason, biasanya:
+  //   - Google provider belum di-enable di Supabase Dashboard
+  //   - Site URL / Redirect URL allowlist di Supabase belum include host ini
+  //   - Authorized redirect URI di Google Cloud Console belum cocok
+  const fallbackUrl = new URL("/sign-in", origin);
+  fallbackUrl.searchParams.set("error", "auth_callback_failed");
+  if (providerError) {
+    fallbackUrl.searchParams.set("reason", providerError);
+    if (providerErrorDesc) {
+      fallbackUrl.searchParams.set("reason_desc", providerErrorDesc.slice(0, 200));
+    }
+  } else if (exchangeError) {
+    fallbackUrl.searchParams.set("reason", "exchange_failed");
+    fallbackUrl.searchParams.set("reason_desc", exchangeError.slice(0, 200));
+  } else if (!code) {
+    fallbackUrl.searchParams.set("reason", "missing_code");
+  }
+  return NextResponse.redirect(fallbackUrl);
 }

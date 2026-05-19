@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPlan } from "@/lib/plans";
+import { getDiscountPercentForPlan, getPlan } from "@/lib/plans";
+import { sharelinkClient } from "@/lib/sharelink/client";
 
 function getServiceClient() {
   return createClient(
@@ -35,11 +36,13 @@ export async function POST(request: Request) {
       websiteName,
       customDomain,
       storeName,
+      referralCode: bodyReferralCode,
     } = body as {
       plan?: string;
       websiteName?: string;
       customDomain?: string;
       storeName?: string;
+      referralCode?: string;
     };
 
     if (!planId?.trim()) {
@@ -67,7 +70,7 @@ export async function POST(request: Request) {
 
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("id, full_name, phone")
+      .select("id, full_name, phone, referred_by_code")
       .eq("user_id", user.id)
       .single();
 
@@ -80,6 +83,101 @@ export async function POST(request: Request) {
 
     const slug = slugify(storeName?.trim() || websiteName.trim());
 
+    // NOTE: onboarding_request inserted AFTER invoice (below) so we can link
+    // them via invoice_id. Order swap migration 20260520000008.
+
+    // Resolve diskon referral. Dua sumber:
+    //   1. body.referralCode (opsional) — user input dari Step 3 Summary form,
+    //      buat existing user yang belum pernah ke-attribute mau klaim kode.
+    //      Kalau valid + client.referred_by_code masih null → simpan
+    //      (first-attribution-wins) supaya add-store berikutnya nggak perlu
+    //      input ulang.
+    //   2. client.referred_by_code yang sudah ada di DB (fallback).
+    //
+    // Body wins HANYA kalau client belum punya attribution; kalau client sudah
+    // punya code lama, code lama yang dipakai (tidak bisa di-override lewat UI).
+    const normalizedBodyCode =
+      typeof bodyReferralCode === "string" ? bodyReferralCode.trim() : "";
+    const effectiveReferralCode =
+      (client.referred_by_code as string | null) ||
+      (normalizedBodyCode || null);
+
+    let discountPercent = 0;
+    if (effectiveReferralCode) {
+      const { data: referrer } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("own_referral_code", effectiveReferralCode)
+        .maybeSingle();
+
+      if (referrer) {
+        const { data: requests } = await supabase
+          .from("onboarding_requests")
+          .select("plan, status, created_at")
+          .eq("client_id", referrer.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        const liveOrPending = (requests ?? []).find((r) => r.status === "live")
+          ?? (requests ?? []).find((r) => r.status !== "rejected");
+        if (liveOrPending?.plan) {
+          discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+        }
+
+        // Persist body-provided code so future add-store doesn't need re-entry.
+        // Guard: only set if NULL (don't overwrite earlier attribution).
+        if (normalizedBodyCode && !client.referred_by_code) {
+          await supabase
+            .from("clients")
+            .update({ referred_by_code: normalizedBodyCode })
+            .eq("id", client.id)
+            .is("referred_by_code", null);
+        }
+      }
+    }
+
+    const setupAmount = plan.setup;
+    const discountAmount = discountPercent > 0
+      ? Math.round((setupAmount * discountPercent) / 100)
+      : 0;
+    const invoiceAmount = setupAmount - discountAmount;
+    const description = discountAmount > 0
+      ? `Setup Webstore Storo.id — Paket ${plan.name} (${slug}) — Diskon referral ${discountPercent}%`
+      : `Setup Webstore Storo.id — Paket ${plan.name} (${slug})`;
+
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("invoices")
+      .insert({
+        client_id: client.id,
+        type: "setup",
+        description,
+        amount: invoiceAmount,
+        status: "unpaid",
+        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        provider: "xendit",
+        // Audit trail — same shape as onboarding/checkout. Finance can reconcile
+        // and Sharelink purchase event (from xendit webhook) reads `plan` from here.
+        metadata: {
+          plan: planId,
+          plan_setup: setupAmount,
+          referral_code: effectiveReferralCode,
+          discount_percent: discountPercent,
+          discount_amount: discountAmount,
+        },
+      })
+      .select("id")
+      .single();
+
+    if (invoiceError || !invoice) {
+      console.error("[dashboard/stores] Invoice insert error:", invoiceError);
+      return NextResponse.json({ error: "Gagal membuat invoice." }, { status: 500 });
+    }
+
+    // Insert onboarding_request linked to the invoice. If this fails after
+    // the invoice was created, the invoice becomes orphan — acceptable; admin
+    // can clean up, and the user just sees a checkout error and can retry.
     const { error: requestError } = await supabase
       .from("onboarding_requests")
       .insert({
@@ -89,38 +187,15 @@ export async function POST(request: Request) {
         requested_slug: slug,
         custom_domain: customDomain?.trim() || null,
         status: "pending",
+        invoice_id: invoice.id,
       });
 
     if (requestError) {
       console.error("[dashboard/stores] Onboarding request error:", requestError);
       return NextResponse.json(
         { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
-        { status: 500 }
+        { status: 500 },
       );
-    }
-
-    const setupAmount = plan.setup;
-    const description = `Setup Webstore Storo.id — Paket ${plan.name} (${slug})`;
-
-    const { data: invoice, error: invoiceError } = await supabase
-      .from("invoices")
-      .insert({
-        client_id: client.id,
-        type: "setup",
-        description,
-        amount: setupAmount,
-        status: "unpaid",
-        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-        provider: "xendit",
-      })
-      .select("id")
-      .single();
-
-    if (invoiceError || !invoice) {
-      console.error("[dashboard/stores] Invoice insert error:", invoiceError);
-      return NextResponse.json({ error: "Gagal membuat invoice." }, { status: 500 });
     }
 
     await supabase.from("onboarding_leads").insert({
@@ -134,6 +209,46 @@ export async function POST(request: Request) {
       invoice_id: invoice.id,
       status: "account_created",
     });
+
+    // ── Fire Sharelink signup event (best-effort) ─────────────────
+    // Same pattern as /api/onboarding/checkout. Counts as a "conversion" in
+    // the referrer's portal dashboard. Doesn't create a reward (reward gated
+    // on the `purchase` event from xendit webhook when invoice is paid).
+    // Idempotent: Sharelink dedupes per (code, referee_id, event_type), so
+    // multiple add-store cycles to the same code won't double-count.
+    //
+    // Defensive: sharelinkClient() throws synchronously if SHARELINK_BASE_URL
+    // or SHARELINK_SECRET_KEY env vars are missing. We MUST NOT let that crash
+    // the checkout — the invoice is already inserted, the user must reach
+    // the payment page no matter what. Wrap the whole thing in try/catch.
+    if (effectiveReferralCode) {
+      try {
+        const sl = sharelinkClient();
+        sl.triggerEvent({
+          referralCode: effectiveReferralCode,
+          eventType: "signup",
+          refereeId: user.id,
+          refereeEmail: user.email ?? undefined,
+          refereeName: client.full_name ?? undefined,
+          metadata: {
+            source: "storo_dashboard_add_store",
+            invoice_id: invoice.id,
+            plan: planId,
+          },
+        }).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          // Duplicate event = idempotent retry from a prior add-store, not an error
+          if (!msg.includes("Duplicate event")) {
+            console.warn("[dashboard/stores] signup event fire failed:", msg);
+          }
+        });
+      } catch (err) {
+        console.warn(
+          "[dashboard/stores] sharelinkClient init failed (env vars missing?):",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
 
     const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

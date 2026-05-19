@@ -11,3 +11,8 @@ verify_jwt = false
 
 [functions.storo-billing-invoice]
 verify_jwt = false
+
+# Called by internal-ventera xendit-callback gateway via POST with x-internal-token.
+# Gateway doesn't send Supabase JWT — function's own x-internal-token check is the auth.
+[functions.storo-payment-confirm]
+verify_jwt = false

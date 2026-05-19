@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getPlan, formatIDR } from "@/lib/plans";
+import { getPlan, getDiscountPercentForPlan, formatIDR } from "@/lib/plans";
 import { signAutoLoginToken } from "@/lib/auth/auto-login-token";
+import { sharelinkClient } from "@/lib/sharelink/client";
 
 // Use raw supabase-js client (not SSR) since this is a stateless API route
 // that needs admin access without cookie context
@@ -65,6 +66,45 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceClient();
+
+    // ── Resolve referral discount (BEFORE creating invoice) ─────────
+    // Mirrors the logic in /api/dashboard/stores so first-time checkout
+    // and add-store flows compute discount identically. Source of truth
+    // is referrer's currently active plan (live > pending). If referrer
+    // doesn't exist or has no plan, discount = 0 — invoice charges full
+    // setup fee gracefully.
+    const normalizedReferralCode =
+      typeof referralCode === "string" ? referralCode.trim() : "";
+
+    let discountPercent = 0;
+    if (normalizedReferralCode) {
+      try {
+        const { data: referrer } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("own_referral_code", normalizedReferralCode)
+          .maybeSingle();
+
+        if (referrer) {
+          const { data: requests } = await supabase
+            .from("onboarding_requests")
+            .select("plan, status, created_at")
+            .eq("client_id", referrer.id)
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+          const liveOrPending =
+            (requests ?? []).find((r) => r.status === "live") ??
+            (requests ?? []).find((r) => r.status !== "rejected");
+          if (liveOrPending?.plan) {
+            discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+          }
+        }
+      } catch (err) {
+        console.warn("[checkout] discount lookup failed:", err);
+        // Fall through — charge full price rather than block checkout
+      }
+    }
 
     let userId: string;
 
@@ -152,7 +192,7 @@ export async function POST(request: NextRequest) {
         },
         { onConflict: "user_id" }
       )
-      .select("id")
+      .select("id, referred_by_code")
       .single();
 
     if (clientError) {
@@ -163,31 +203,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── First-attribution-wins: only set referred_by_code if not already set ──
+    // Separate UPDATE (not part of upsert) so we never clobber a referee who
+    // already has an earlier attribution (e.g. user signed up via code A, came
+    // back through code B's link, and re-submitted the form).
+    let effectiveReferralCode = client.referred_by_code as string | null;
+    if (normalizedReferralCode && !effectiveReferralCode) {
+      await supabase
+        .from("clients")
+        .update({ referred_by_code: normalizedReferralCode })
+        .eq("id", client.id)
+        .is("referred_by_code", null);
+      effectiveReferralCode = normalizedReferralCode;
+    }
+
+    // If the form provided a code but the client was already attributed to a
+    // different one, the OLD code wins for discount + signup-event purposes —
+    // recompute discount based on the actual stored attribution.
+    if (
+      normalizedReferralCode &&
+      effectiveReferralCode &&
+      effectiveReferralCode !== normalizedReferralCode
+    ) {
+      discountPercent = 0;
+      try {
+        const { data: realReferrer } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("own_referral_code", effectiveReferralCode)
+          .maybeSingle();
+
+        if (realReferrer) {
+          const { data: requests } = await supabase
+            .from("onboarding_requests")
+            .select("plan, status, created_at")
+            .eq("client_id", realReferrer.id)
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+          const liveOrPending =
+            (requests ?? []).find((r) => r.status === "live") ??
+            (requests ?? []).find((r) => r.status !== "rejected");
+          if (liveOrPending?.plan) {
+            discountPercent = getDiscountPercentForPlan(liveOrPending.plan);
+          }
+        }
+      } catch {
+        // Discount stays 0 — better than blocking checkout
+      }
+    }
+
     // ── Create onboarding request ─────────────────────────────────
     // Fatal: if this fails the user has nothing to show in their dashboard
     // after paying. Better to surface the error before the invoice is created.
-    const { error: requestError } = await supabase
-      .from("onboarding_requests")
-      .insert({
-        client_id: client.id,
-        plan: planId,
-        template_name: "modern", // default template, changed by engineer later
-        requested_slug: slug,
-        custom_domain: customDomain?.trim() || null,
-        status: "pending",
-      });
+    // NOTE: onboarding_request inserted AFTER invoice (below) so we can link
+    // them via invoice_id (migration 20260520000008). Dashboard filters by
+    // invoice.status='paid' so unpaid requests don't pollute "Status Onboarding".
 
-    if (requestError) {
-      console.error("[checkout] Onboarding request error:", requestError);
-      return NextResponse.json(
-        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
-        { status: 500 }
-      );
-    }
-
-    // ── Create invoice ────────────────────────────────────────────
+    // ── Create invoice (with referral discount applied) ───────────
     const setupAmount = plan.setup;
-    const description = `Setup Webstore Storo.id — Paket ${plan.name}`;
+    const discountAmount =
+      discountPercent > 0 ? Math.round((setupAmount * discountPercent) / 100) : 0;
+    const invoiceAmount = setupAmount - discountAmount;
+    const description =
+      discountAmount > 0
+        ? `Setup Webstore Storo.id — Paket ${plan.name} (Diskon referral ${discountPercent}%)`
+        : `Setup Webstore Storo.id — Paket ${plan.name}`;
 
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
@@ -195,10 +276,20 @@ export async function POST(request: NextRequest) {
         client_id: client.id,
         type: "setup",
         description,
-        amount: setupAmount,
+        amount: invoiceAmount,
         status: "unpaid",
         due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
         provider: "xendit",
+        // Audit trail: store the breakdown so finance can reconcile and the
+        // Sharelink purchase event (fired from xendit webhook) can include
+        // the original setup amount + discount in its metadata.
+        metadata: {
+          plan: planId,
+          plan_setup: setupAmount,
+          referral_code: effectiveReferralCode,
+          discount_percent: discountPercent,
+          discount_amount: discountAmount,
+        },
       })
       .select("id")
       .single();
@@ -208,6 +299,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Gagal membuat invoice. Coba lagi." },
         { status: 500 }
+      );
+    }
+
+    // Insert onboarding_request linked to invoice. Order swap means an orphan
+    // invoice is possible if THIS insert fails — acceptable; admin reconciles.
+    const { error: requestError } = await supabase
+      .from("onboarding_requests")
+      .insert({
+        client_id: client.id,
+        plan: planId,
+        template_name: "modern",
+        requested_slug: slug,
+        custom_domain: customDomain?.trim() || null,
+        status: "pending",
+        invoice_id: invoice.id,
+      });
+
+    if (requestError) {
+      console.error("[checkout] Onboarding request error:", requestError);
+      return NextResponse.json(
+        { error: "Gagal menyimpan permintaan toko. Coba lagi atau hubungi tim kami." },
+        { status: 500 },
       );
     }
 
@@ -224,6 +337,47 @@ export async function POST(request: NextRequest) {
       invoice_id: invoice.id,
       status: "account_created",
     });
+
+    // ── Fire Sharelink signup event (best-effort) ─────────────────
+    // Counts as a "conversion" in the referrer's portal dashboard. Doesn't
+    // create a reward (that's gated on the purchase event from xendit webhook
+    // — anti-fraud: no reward until they actually pay). Idempotent: Sharelink
+    // dedupes per (code, referee_id, event_type), so retries are safe.
+    //
+    // Fire-and-forget — we don't await. A missed signup ping must NEVER block
+    // the user from reaching the payment page. The purchase event later will
+    // still create the reward correctly because Sharelink doesn't require a
+    // signup event to precede a purchase.
+    if (effectiveReferralCode) {
+      // Defensive: sharelinkClient() throws synchronously if env vars missing.
+      // Don't let it crash the route — invoice is created, user must reach payment.
+      try {
+        const sl = sharelinkClient();
+        sl.triggerEvent({
+          referralCode: effectiveReferralCode,
+          eventType: "signup",
+          refereeId: userId,
+          refereeEmail: email.trim(),
+          refereeName: fullName.trim(),
+          metadata: {
+            source: "storo_onboarding_checkout",
+            invoice_id: invoice.id,
+            plan: planId,
+          },
+        }).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          // Duplicate event = idempotent retry, not an error
+          if (!msg.includes("Duplicate event")) {
+            console.warn("[checkout] signup event fire failed:", msg);
+          }
+        });
+      } catch (err) {
+        console.warn(
+          "[checkout] sharelinkClient init failed (env vars missing?):",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
 
     // ── Create Xendit invoice via edge function (Gateway pattern) ──
     const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://storo.id";

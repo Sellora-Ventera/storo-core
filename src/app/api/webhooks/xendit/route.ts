@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { deductOpsFeeForOrder } from "@/lib/wallet/deduct-ops-fee";
+import { fireReferralPurchaseEvent } from "@/lib/sharelink/fire-purchase-event";
 
 export const dynamic = "force-dynamic";
 
@@ -272,7 +273,7 @@ async function handleSetupInvoice(
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("id, status, client_id, metadata")
+    .select("id, status, client_id, type, amount, metadata")
     .eq("id", invoiceUuid)
     .maybeSingle();
 
@@ -320,6 +321,64 @@ async function handleSetupInvoice(
       type: "success",
       link: `/dashboard/billing/${invoice.id}`,
     });
+  }
+
+  // ── Fire referral 'purchase' event to Sharelink (only on FIRST paid invoice) ──
+  // Anti-fraud: we trigger reward only when the referee actually pays for their
+  // first setup invoice. If they refund or never pay, no reward is created.
+  if (invoice.client_id && invoice.type === "setup") {
+    const { count: priorPaidCount } = await supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", invoice.client_id)
+      .eq("status", "paid")
+      .neq("id", invoice.id);
+
+    if ((priorPaidCount ?? 0) === 0) {
+      // Fetch refereeUser_id from clients row + plan from onboarding (best-effort)
+      const { data: refereeClient } = await supabase
+        .from("clients")
+        .select("user_id, full_name")
+        .eq("id", invoice.client_id)
+        .single();
+
+      const { data: refereeAuth } = refereeClient?.user_id
+        ? await supabase.auth.admin.getUserById(refereeClient.user_id)
+        : { data: { user: null } };
+
+      // Determine plan from invoice metadata or latest onboarding_request
+      let invoicePlan: string | null =
+        (invoice.metadata as Record<string, unknown> | null)?.plan as string | null ?? null;
+      if (!invoicePlan) {
+        const { data: req } = await supabase
+          .from("onboarding_requests")
+          .select("plan")
+          .eq("client_id", invoice.client_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        invoicePlan = req?.plan ?? null;
+      }
+
+      if (refereeClient?.user_id) {
+        const result = await fireReferralPurchaseEvent(supabase, {
+          refereeClientId: invoice.client_id,
+          refereeUserId: refereeClient.user_id,
+          refereeEmail: refereeAuth.user?.email ?? null,
+          refereeName: refereeClient.full_name ?? null,
+          invoiceId: invoice.id,
+          invoicePlan,
+          invoiceAmount: invoice.amount ?? null,
+        });
+        if (!result.ok) {
+          console.error("[xendit-inv] referral event failed:", result.error);
+        } else if (result.skipped) {
+          console.log("[xendit-inv] referral event skipped:", result.skipped);
+        } else {
+          console.log("[xendit-inv] referral event fired, rewards:", result.reward_ids);
+        }
+      }
+    }
   }
 
   console.log("[xendit-inv] Invoice paid:", invoice.id);
