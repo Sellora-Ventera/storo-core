@@ -1184,7 +1184,7 @@ function Step6Success({ state }: { state: State }) {
       </p>
 
       <div className="mt-6 pt-6 border-t border-gray-100">
-        <Link href="/sign-in" className="text-sm text-primary hover:underline font-medium">
+        <Link href="/auth/sso/login" className="text-sm text-primary hover:underline font-medium">
           Login ke Dashboard →
         </Link>
       </div>

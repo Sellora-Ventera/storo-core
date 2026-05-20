@@ -79,7 +79,7 @@ const Header = () => {
               )
             )}
             <Button asChild variant="ghost" className="cursor-pointer">
-              <Link href="/sign-in">Masuk</Link>
+              <Link href="/auth/sso/login">Masuk</Link>
             </Button>
             <Button asChild className="btn-hero">
               <Link href="/onboarding">Pesan Toko</Link>
@@ -127,7 +127,7 @@ const Header = () => {
               )}
               <div className="px-3 py-2 space-y-2">
                 <Button asChild variant="outline" className="w-full cursor-pointer">
-                  <Link href="/sign-in" onClick={() => setIsMenuOpen(false)}>
+                  <Link href="/auth/sso/login" onClick={() => setIsMenuOpen(false)}>
                     Masuk
                   </Link>
                 </Button>
