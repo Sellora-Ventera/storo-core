@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import * as client from "openid-client";
-import { getOidcConfig, SSO_REDIRECT_URI } from "@/lib/sso/config";
+import { APP_ORIGIN, getOidcConfig, SSO_REDIRECT_URI } from "@/lib/sso/config";
 import { readStateCookie, clearStateCookie } from "@/lib/sso/state-cookie";
 import { syncSsoUserToSupabase } from "@/lib/sso/sync";
 import { mintSupabaseSession } from "@/lib/sso/session";
 
-function redirectToSignIn(req: NextRequest, error: string, reason?: string) {
-  const url = new URL("/sign-in", req.url);
+function redirectToSignIn(_req: NextRequest, error: string, reason?: string) {
+  const url = new URL("/sign-in", APP_ORIGIN);
   url.searchParams.set("error", error);
   if (reason) url.searchParams.set("reason", reason.slice(0, 200));
   return NextResponse.redirect(url);
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
     return redirectToSignIn(req, "sso_sync_failed", String(e));
   }
 
-  const target = new URL(stateCookie.next, req.url);
+  const target = new URL(stateCookie.next, APP_ORIGIN);
   if (stateCookie.draftId) {
     target.searchParams.set("resume", stateCookie.draftId);
   }

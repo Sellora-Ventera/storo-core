@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import * as client from "openid-client";
 import {
+  APP_ORIGIN,
   getOidcConfig,
   SSO_REDIRECT_URI,
   SSO_SCOPES,
@@ -16,7 +17,7 @@ function safeNext(raw: string | null): string {
 
 export async function GET(req: NextRequest) {
   if (!isSsoConfigured()) {
-    const url = new URL("/sign-in", req.url);
+    const url = new URL("/sign-in", APP_ORIGIN);
     url.searchParams.set("error", "sso_not_configured");
     return NextResponse.redirect(url);
   }
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   try {
     config = await getOidcConfig();
   } catch (e) {
-    const url = new URL("/sign-in", req.url);
+    const url = new URL("/sign-in", APP_ORIGIN);
     url.searchParams.set("error", "sso_discovery_failed");
     url.searchParams.set("reason", String(e).slice(0, 200));
     return NextResponse.redirect(url);

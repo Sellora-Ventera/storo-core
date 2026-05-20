@@ -1,18 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import * as client from "openid-client";
 import {
+  APP_ORIGIN,
   getOidcConfig,
   SSO_POST_LOGOUT_URI,
   isSsoConfigured,
 } from "@/lib/sso/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-async function handleLogout(req: NextRequest): Promise<NextResponse> {
+async function handleLogout(): Promise<NextResponse> {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
 
   if (!isSsoConfigured()) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/", APP_ORIGIN));
   }
 
   try {
@@ -22,14 +23,14 @@ async function handleLogout(req: NextRequest): Promise<NextResponse> {
     });
     return NextResponse.redirect(endUrl.href);
   } catch {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/", APP_ORIGIN));
   }
 }
 
-export async function GET(req: NextRequest) {
-  return handleLogout(req);
+export async function GET() {
+  return handleLogout();
 }
 
-export async function POST(req: NextRequest) {
-  return handleLogout(req);
+export async function POST() {
+  return handleLogout();
 }
