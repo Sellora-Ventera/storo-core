@@ -24,24 +24,30 @@ export async function GET(req: NextRequest) {
     return redirectToSignIn(req, "sso_provider_error", `${providerError}: ${desc ?? ""}`);
   }
 
+  // Build the "currentUrl" passed to openid-client from SSO_REDIRECT_URI
+  // (the value sent to the IdP at auth time) plus the query string from the
+  // incoming request. openid-client v6 derives the token request's
+  // redirect_uri from currentUrl.origin+pathname — using SSO_REDIRECT_URI
+  // here guarantees it matches the auth request byte-for-byte even when
+  // req.url comes back wrong (e.g. proxy didn't forward X-Forwarded-Host
+  // and Next.js sees Host: localhost:3000 in production).
+  //
+  // Passing redirect_uri via tokenEndpointParameters appends rather than
+  // overrides, so two redirect_uri params end up in the body — which
+  // node-oidc-provider rejects as invalid_grant.
+  const incoming = new URL(req.url);
+  const currentUrl = new URL(SSO_REDIRECT_URI);
+  incoming.searchParams.forEach((value, key) => {
+    currentUrl.searchParams.set(key, value);
+  });
+
   let tokens;
   try {
     const config = await getOidcConfig();
-    // Pass redirect_uri explicitly via tokenEndpointParameters so the value
-    // sent in the token POST matches SSO_REDIRECT_URI used during the
-    // authorization request byte-for-byte. openid-client v6 derives it from
-    // currentUrl by default, but req.url can carry a forwarded host on some
-    // platforms or differ subtly (trailing slash, host case) — and per
-    // RFC 6749 §4.1.3 a mismatch triggers invalid_grant.
-    tokens = await client.authorizationCodeGrant(
-      config,
-      new URL(req.url),
-      {
-        pkceCodeVerifier: stateCookie.codeVerifier,
-        expectedState: stateCookie.state,
-      },
-      { redirect_uri: SSO_REDIRECT_URI },
-    );
+    tokens = await client.authorizationCodeGrant(config, currentUrl, {
+      pkceCodeVerifier: stateCookie.codeVerifier,
+      expectedState: stateCookie.state,
+    });
   } catch (e) {
     // openid-client v6 throws ResponseBodyError with .error/.error_description
     // when the token endpoint returns 4xx. .cause is the parsed JSON body —
@@ -81,6 +87,8 @@ export async function GET(req: NextRequest) {
       status: err.status,
       cause: err.cause,
       requestUrl: req.url,
+      currentUrlSentToTokenEndpoint: currentUrl.toString(),
+      ssoRedirectUri: SSO_REDIRECT_URI,
       hasCodeVerifier: Boolean(stateCookie.codeVerifier),
       hasState: Boolean(stateCookie.state),
     });
