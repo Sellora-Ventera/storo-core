@@ -322,10 +322,9 @@ export default function StoreSidebar({
   }, [pathname]);
 
   async function handleLogout() {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    router.push("/sign-in");
-    router.refresh();
+    // Full-page nav to /auth/sso/logout — clears Supabase session AND fires
+    // RP-initiated logout at Ventera SSO.
+    window.location.href = "/auth/sso/logout";
   }
 
   const currentStore = stores.find((s) => s.id === storeId);

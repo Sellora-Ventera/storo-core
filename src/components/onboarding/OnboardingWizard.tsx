@@ -14,8 +14,6 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
-  Eye,
-  EyeOff,
   ArrowLeft,
   ArrowRight,
   ShoppingBag,
@@ -23,24 +21,22 @@ import {
   User,
   CreditCard,
   ClipboardList,
+  LogIn,
 } from "lucide-react";
 import { getPlan, getActivePlans, formatIDR, type PlanId } from "@/lib/plans";
 
 // ── Types ────────────────────────────────────────────────────────────────
-type Step = 1 | 2 | 3 | 4 | 5 | 6; // 6 = success
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 type State = {
   step: Step;
-  // Step 1: Plan
   plan: PlanId | "";
-  // Step 2: Domain
-  websiteName: string; // slug for <slug>.storo.id
+  websiteName: string;
   subdomain: string;
   domainType: "subdomain" | "custom" | "own";
   ownDomain: string;
   customDomain: string;
-  domainPicked: boolean; // user has explicitly clicked a domain option (subdomain or custom)
-  // Step 3: Profile
+  domainPicked: boolean;
   fullName: string;
   storeName: string;
   phone: string;
@@ -49,21 +45,15 @@ type State = {
   shopeeVerified: boolean;
   shopeeStoreId: string;
   shopeeStoreName: string;
-  // Step 2: Identity
   ktpImageUrl: string;
   bankName: string;
   bankAccountNumber: string;
-  // Step 4: Template
   templateId: string;
   templateName: string;
-  // Step 4: Account
-  authMethod: "email" | "google" | "";
+  authMethod: "sso" | "";
   email: string;
-  password: string;
-  // Step 5: Summary & pay
   invoiceId: string;
   xenditInvoiceUrl: string;
-  // Step 7: Review
   agreed: boolean;
 };
 
@@ -75,8 +65,6 @@ type Action =
   | { type: "PREV" }
   | { type: "GOTO"; step: Step };
 
-// Saat user klik Back, field di step tujuan di-reset supaya mereka isi ulang
-// dari nol (sesuai permintaan produk: kembali = start over untuk step itu).
 const STEP_RESET_FIELDS: Record<number, Partial<State>> = {
   1: { plan: "" },
   2: { websiteName: "", customDomain: "", domainPicked: false },
@@ -89,7 +77,7 @@ const STEP_RESET_FIELDS: Record<number, Partial<State>> = {
     shopeeStoreId: "",
     shopeeStoreName: "",
   },
-  4: { authMethod: "", email: "", password: "" },
+  4: { authMethod: "", email: "" },
   5: { invoiceId: "", xenditInvoiceUrl: "", agreed: false },
 };
 
@@ -129,8 +117,6 @@ const STEP_META = [
   { num: 5, label: "Bayar", icon: ClipboardList },
 ];
 
-// Key lama dari fitur persistence yang sudah dihapus. Dibersihkan sekali di
-// mount pertama supaya browser user yang masih pegang data stale ikut reset.
 const LEGACY_WIZARD_KEY = "storo:onboarding:wizard:v1";
 const LEGACY_DOMAIN_PREFIX = "storo:onboarding:domain-search:v1:";
 
@@ -145,7 +131,54 @@ function purgeLegacyPersistence() {
       }
     }
   } catch {
-    // ignore — quota / private mode
+    // ignore
+  }
+}
+
+// ── Draft persistence (SSO round-trip) ────────────────────────────────────
+// Step 4 redirects to Ventera SSO (full-page nav), wiping in-memory state.
+// We persist a draft snapshot to sessionStorage before redirect and restore
+// on return via ?resume=<draftId>.
+const DRAFT_KEY_PREFIX = "storo_onboarding_draft_";
+
+type DraftSnapshot = Pick<
+  State,
+  | "plan"
+  | "websiteName"
+  | "customDomain"
+  | "domainPicked"
+  | "fullName"
+  | "storeName"
+  | "phone"
+  | "shopeeStoreLink"
+>;
+
+function saveDraft(draftId: string, snapshot: DraftSnapshot) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(DRAFT_KEY_PREFIX + draftId, JSON.stringify(snapshot));
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadDraft(draftId: string): DraftSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY_PREFIX + draftId);
+    if (!raw) return null;
+    return JSON.parse(raw) as DraftSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft(draftId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(DRAFT_KEY_PREFIX + draftId);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -177,28 +210,53 @@ export default function OnboardingWizard() {
     templateName: "",
     authMethod: "",
     email: "",
-    password: "",
     invoiceId: "",
     xenditInvoiceUrl: "",
     agreed: false,
   });
 
-  // Bersihkan sisa persistence lama dari browser user, lalu pickup `plan`
-  // dari query param (hanya untuk share link dari halaman pricing, mis.
-  // /onboarding?plan=advance). Tidak ada write ke storage — refresh selalu
-  // mulai dari step 1 dengan state kosong.
   const hydratedRef = useRef(false);
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
     purgeLegacyPersistence();
+
     const planParam = searchParams.get("plan");
     if (planParam && getPlan(planParam)) {
       dispatch({ type: "UPDATE", payload: { plan: planParam as PlanId } });
     }
+
+    // Resume after SSO round-trip
+    const resumeId = searchParams.get("resume");
+    if (resumeId) {
+      const draft = loadDraft(resumeId);
+      if (draft) {
+        dispatch({
+          type: "UPDATE",
+          payload: {
+            ...draft,
+            authMethod: "sso",
+          },
+        });
+        // Probe Supabase session to confirm SSO sync landed
+        (async () => {
+          const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+          const supabase = getSupabaseBrowserClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.email) {
+            dispatch({ type: "UPDATE", payload: { email: user.email, authMethod: "sso" } });
+            dispatch({ type: "GOTO", step: 5 });
+          } else {
+            // Session not present — SSO may have failed; land at step 4 so
+            // user can retry.
+            dispatch({ type: "GOTO", step: 4 });
+          }
+          clearDraft(resumeId);
+        })();
+      }
+    }
   }, [searchParams]);
 
-  // Pick up referral code from sessionStorage
   const [referralCode, setReferralCode] = useState<string | null>(null);
   useEffect(() => {
     const code = sessionStorage.getItem("storo_referral_code");
@@ -209,7 +267,6 @@ export default function OnboardingWizard() {
 
   return (
     <div className={`mx-auto px-4 py-8 ${state.step === 1 ? "max-w-5xl" : "max-w-xl"}`}>
-      {/* Progress bar */}
       {state.step <= 5 && (
         <div className="mb-8 max-w-lg mx-auto">
           <div className="flex items-center">
@@ -219,7 +276,6 @@ export default function OnboardingWizard() {
               const Icon = s.icon;
               return (
                 <div key={s.num} className="flex items-center flex-1 last:flex-none">
-                  {/* Step pill */}
                   <div className="flex flex-col items-center">
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
@@ -240,7 +296,6 @@ export default function OnboardingWizard() {
                       {s.label}
                     </span>
                   </div>
-                  {/* Connector */}
                   {idx < STEP_META.length - 1 && (
                     <div className="flex-1 h-0.5 mx-2 mb-5 rounded-full overflow-hidden bg-gray-200">
                       <div
@@ -257,7 +312,6 @@ export default function OnboardingWizard() {
         </div>
       )}
 
-      {/* Steps */}
       {state.step === 1 && <Step1Plan state={state} update={update} onNext={() => dispatch({ type: "NEXT" })} />}
       {state.step === 2 && <Step2Domain state={state} update={update} onNext={() => dispatch({ type: "NEXT" })} onPrev={() => dispatch({ type: "PREV" })} />}
       {state.step === 3 && <Step3Profile state={state} update={update} onNext={() => dispatch({ type: "NEXT" })} onPrev={() => dispatch({ type: "PREV" })} />}
@@ -265,7 +319,6 @@ export default function OnboardingWizard() {
       {state.step === 5 && <Step5Summary state={state} update={update} referralCode={referralCode} onPrev={() => dispatch({ type: "PREV" })} onSuccess={() => dispatch({ type: "GOTO", step: 6 })} />}
       {state.step === 6 && <Step6Success state={state} />}
 
-      {/* WhatsApp fallback */}
       {state.step <= 5 && (
         <div className="mt-6 text-center">
           <a
@@ -305,7 +358,6 @@ function Step1Plan({
     onNext();
   };
 
-  // Descriptions matching landing page Pricing
   const planDescriptions: Record<string, string> = {
     starter: "Untuk bisnis yang baru mulai",
     pro: "Paling populer untuk seller aktif",
@@ -346,7 +398,6 @@ function Step1Plan({
                 </div>
               )}
 
-              {/* Selected indicator */}
               {isSelected && (
                 <div className="absolute top-3 right-3">
                   <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
@@ -400,7 +451,6 @@ function Step1Plan({
   );
 }
 
-// ── Domain result type ───────────────────────────────────────────────────
 interface DomainResult {
   domain: string;
   extension: string;
@@ -410,7 +460,6 @@ interface DomainResult {
   available: boolean;
 }
 
-// ── Step 2: Domain ───────────────────────────────────────────────────────
 function Step2Domain({
   state,
   update,
@@ -428,7 +477,6 @@ function Step2Domain({
   const [searched, setSearched] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cleanup debounce on unmount
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
@@ -438,7 +486,6 @@ function Step2Domain({
     update({ websiteName: slug, customDomain: "", domainPicked: false });
     setError("");
 
-    // Auto-search after typing stops
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (slug.length >= 3) {
       debounceRef.current = setTimeout(() => searchDomains(slug), 500);
@@ -500,10 +547,8 @@ function Step2Domain({
           className="text-lg h-12"
         />
 
-        {/* Free subdomain preview - shown only before domain search results load */}
         {error && <p className="text-red-500 text-xs">{error}</p>}
 
-        {/* Domain availability results */}
         {searching && (
           <div className="flex items-center justify-center py-4 text-sm text-gray-400 gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -515,7 +560,6 @@ function Step2Domain({
           <div>
             <p className="text-xs text-gray-500 mb-2 font-medium">Pilih satu domain — semua gratis langsung <span className="text-red-500">*</span></p>
             <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
-              {/* Subdomain .storo.id — always available, free, instant */}
               {(() => {
                 const subdomainFull = `${state.websiteName}.storo.id`;
                 const isSelected = state.domainPicked && !state.customDomain;
@@ -623,7 +667,6 @@ function Step2Domain({
   );
 }
 
-// ── Step 3: Profile ──────────────────────────────────────────────────────
 function Step3Profile({
   state,
   update,
@@ -662,7 +705,6 @@ function Step3Profile({
       </div>
 
       <div className="space-y-5">
-        {/* Name */}
         <div className="space-y-1.5">
           <Label htmlFor="fullName">Nama Lengkap <span className="text-red-500">*</span></Label>
           <Input
@@ -674,7 +716,6 @@ function Step3Profile({
           {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
         </div>
 
-        {/* Store name */}
         <div className="space-y-1.5">
           <Label htmlFor="storeName">Nama Toko <span className="text-red-500">*</span></Label>
           <Input
@@ -686,7 +727,6 @@ function Step3Profile({
           {errors.storeName && <p className="text-red-500 text-xs">{errors.storeName}</p>}
         </div>
 
-        {/* WhatsApp */}
         <div className="space-y-1.5">
           <Label htmlFor="phone">Nomor WhatsApp <span className="text-red-500">*</span></Label>
           <Input
@@ -699,7 +739,6 @@ function Step3Profile({
           {errors.phone && <p className="text-red-500 text-xs">{errors.phone}</p>}
         </div>
 
-        {/* Shopee link (optional) */}
         <div className="space-y-1.5">
           <Label htmlFor="shopee">
             Link Toko Shopee{" "}
@@ -736,19 +775,7 @@ function Step3Profile({
   );
 }
 
-// ── Google Icon ──────────────────────────────────────────────────────────
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
-      <path d="M47.532 24.552c0-1.636-.141-3.2-.402-4.704H24.48v8.897h12.984c-.56 3.018-2.26 5.576-4.814 7.29v6.056h7.794c4.56-4.2 7.088-10.39 7.088-17.539z" fill="#4285F4"/>
-      <path d="M24.48 48c6.514 0 11.978-2.16 15.97-5.91l-7.794-6.056c-2.16 1.446-4.92 2.3-8.176 2.3-6.288 0-11.618-4.248-13.522-9.953H2.904v6.25C6.876 42.612 15.106 48 24.48 48z" fill="#34A853"/>
-      <path d="M10.958 28.381A14.48 14.48 0 0 1 9.72 24c0-1.52.26-2.994.716-4.381v-6.25H2.904A23.97 23.97 0 0 0 .48 24c0 3.864.928 7.52 2.424 10.631l8.054-6.25z" fill="#FBBC05"/>
-      <path d="M24.48 9.666c3.542 0 6.718 1.218 9.216 3.61l6.912-6.912C36.446 2.428 30.994 0 24.48 0 15.106 0 6.876 5.388 2.904 13.369l8.054 6.25c1.904-5.705 7.234-9.953 13.522-9.953z" fill="#EA4335"/>
-    </svg>
-  );
-}
-
-// ── Step 3: Account ──────────────────────────────────────────────────────
+// ── Step 4: SSO Account ──────────────────────────────────────────────────
 function Step4Account({
   state,
   update,
@@ -760,201 +787,96 @@ function Step4Account({
   onNext: () => void;
   onPrev: () => void;
 }) {
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [redirectLoading, setRedirectLoading] = useState(false);
 
-  // Auto-detect existing session (e.g. user clicked "Kembali" from step 5)
+  // Detect existing Supabase session (e.g. user already logged in earlier or
+  // came back via SSO callback and landed here instead of step 5).
   useEffect(() => {
-    if (state.authMethod === "google" && state.email) return; // already set
     (async () => {
-      const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const isGoogle = session.user.app_metadata?.provider === "google";
-        update({
-          email: session.user.email || "",
-          authMethod: isGoogle ? "google" : "email",
-        });
+      try {
+        const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+        const supabase = getSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          update({ email: user.email, authMethod: "sso" });
+        }
+      } finally {
+        setSessionLoading(false);
       }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const validate = () => {
-    // Google auth — email sudah terisi dari session, skip password
-    if (state.authMethod === "google" && state.email) return true;
+  const handleSsoLogin = () => {
+    setRedirectLoading(true);
+    const draftId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `d_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-    const e: Record<string, string> = {};
-    if (!state.email.trim()) {
-      e.email = "Email wajib diisi";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())) {
-      e.email = "Format email tidak valid";
-    }
-    if (!state.password) {
-      e.password = "Password wajib diisi";
-    } else if (state.password.length < 8) {
-      e.password = "Password minimal 8 karakter";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    saveDraft(draftId, {
+      plan: state.plan,
+      websiteName: state.websiteName,
+      customDomain: state.customDomain,
+      domainPicked: state.domainPicked,
+      fullName: state.fullName,
+      storeName: state.storeName,
+      phone: state.phone,
+      shopeeStoreLink: state.shopeeStoreLink,
+    });
+
+    const next = `/onboarding`;
+    window.location.href = `/auth/sso/login?next=${encodeURIComponent(next)}&draft=${encodeURIComponent(draftId)}`;
   };
 
-  const handleNext = () => {
-    if (validate()) onNext();
-  };
-
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
+  const handleSignOut = async () => {
     const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
     const supabase = getSupabaseBrowserClient();
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${location.origin}/api/auth/callback?popup=true`,
-        skipBrowserRedirect: true,
-      },
-    });
-    if (error || !data.url) {
-      setErrors({ email: error?.message || "Gagal membuka Google Sign-In" });
-      setGoogleLoading(false);
-      return;
-    }
-
-    // Open popup
-    const w = 500, h = 600;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-    const top = window.screenY + (window.outerHeight - h) / 2;
-    const popup = window.open(data.url, "google-auth", `width=${w},height=${h},left=${left},top=${top},popup=yes`);
-
-    // Listen for postMessage from popup callback
-    const handler = async (event: MessageEvent) => {
-      if (event.origin !== location.origin) return;
-      if (event.data?.type === "AUTH_COMPLETE") {
-        cleanup();
-        const { data: sess } = await supabase.auth.getSession();
-        if (sess?.session?.user) {
-          update({ email: sess.session.user.email || "", authMethod: "google" });
-          onNext();
-        }
-        setGoogleLoading(false);
-      } else if (event.data?.type === "AUTH_FAILED") {
-        cleanup();
-        setErrors({ email: "Google sign-in gagal. Coba lagi." });
-        setGoogleLoading(false);
-      }
-    };
-    window.addEventListener("message", handler);
-
-    // Poll: if user closes popup manually
-    const poll = setInterval(() => {
-      if (popup?.closed) { cleanup(); setGoogleLoading(false); }
-    }, 500);
-
-    function cleanup() {
-      window.removeEventListener("message", handler);
-      clearInterval(poll);
-    }
+    await supabase.auth.signOut();
+    update({ email: "", authMethod: "" });
   };
+
+  const isLoggedIn = state.authMethod === "sso" && Boolean(state.email);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">Buat Akun</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Akun ini untuk login ke dashboard toko Anda setelah pembayaran selesai.
+          Login dengan Ventera SSO. Akun otomatis dibuat di Storo jika belum ada.
         </p>
       </div>
 
-      {state.authMethod === "google" && state.email ? (
-        /* Already logged in with Google */
+      {sessionLoading ? (
+        <div className="flex items-center justify-center py-10 gap-2 text-sm text-gray-400">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Memeriksa sesi...
+        </div>
+      ) : isLoggedIn ? (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
           <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-green-800">Terhubung dengan Google</p>
+            <p className="text-sm font-medium text-green-800">Terhubung dengan Ventera SSO</p>
             <p className="text-xs text-green-600 truncate">{state.email}</p>
           </div>
           <button
             type="button"
-            onClick={async () => {
-              const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
-              const supabase = getSupabaseBrowserClient();
-              await supabase.auth.signOut();
-              update({ email: "", password: "", authMethod: "" });
-            }}
+            onClick={handleSignOut}
             className="text-xs text-gray-500 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap"
           >
             Ganti akun
           </button>
         </div>
       ) : (
-        <>
-          {/* Google Sign Up */}
-          <button
-            type="button"
-            onClick={handleGoogleSignUp}
-            disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border-2 border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {googleLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <GoogleIcon />
-            )}
-            {googleLoading ? "Menghubungkan..." : "Daftar dengan Google"}
-          </button>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white px-3 text-xs text-gray-400">atau daftar dengan email</span>
-            </div>
-          </div>
-
-          <div className="space-y-5">
-            {/* Email */}
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-              <Input
-                id="email"
-                type="email"
-                value={state.email}
-                onChange={(e) => update({ email: e.target.value })}
-                placeholder="nama@email.com"
-                autoComplete="email"
-              />
-              {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={state.password}
-                  onChange={(e) => update({ password: e.target.value })}
-                  placeholder="Minimal 8 karakter"
-                  autoComplete="new-password"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
-            </div>
-          </div>
-        </>
+        <button
+          type="button"
+          onClick={handleSsoLogin}
+          disabled={redirectLoading}
+          className="w-full inline-flex items-center justify-center gap-3 rounded-lg h-12 bg-primary text-white font-semibold hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-60"
+        >
+          {redirectLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+          {redirectLoading ? "Mengalihkan..." : "Lanjutkan dengan Ventera SSO"}
+        </button>
       )}
 
       <div className="flex gap-3 mt-6">
@@ -962,18 +884,14 @@ function Step4Account({
           onClick={onPrev}
           variant="outline"
           className="flex-1 h-11 text-sm font-semibold cursor-pointer"
+          disabled={redirectLoading}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Kembali
         </Button>
         <Button
-          onClick={handleNext}
-          disabled={
-            state.authMethod !== "google" &&
-            (!state.email.trim() ||
-              !state.password ||
-              state.password.length < 8)
-          }
+          onClick={onNext}
+          disabled={!isLoggedIn || redirectLoading}
           className="flex-1 bg-primary text-white hover:bg-primary/90 h-11 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Lihat Ringkasan
@@ -984,7 +902,6 @@ function Step4Account({
   );
 }
 
-// ── Step 4: Summary & Pay ────────────────────────────────────────────────
 function Step5Summary({
   state,
   update,
@@ -998,6 +915,7 @@ function Step5Summary({
   onPrev: () => void;
   onSuccess: () => void;
 }) {
+  void onSuccess;
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -1008,11 +926,6 @@ function Step5Summary({
     discountPercent > 0 ? Math.round((setupFee * discountPercent) / 100) : 0;
   const total = setupFee - discountAmount;
 
-  // Resolve the actual discount % from the referrer's active plan so the
-  // Summary doesn't mislead the user (it used to display setupFee verbatim
-  // while the backend silently applied the discount, making it look like
-  // discount wasn't working). Server-side stays the source of truth — this
-  // is for display only.
   useEffect(() => {
     if (!referralCode) {
       setDiscountPercent(0);
@@ -1027,9 +940,7 @@ function Step5Summary({
           setDiscountPercent(data.discountPercent);
         }
       })
-      .catch(() => {
-        // Silent — UI will just show full price, backend still applies discount
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -1040,20 +951,9 @@ function Step5Summary({
     setApiError(null);
 
     try {
-      // If Google auth, get access token to send for server-side verification
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (state.authMethod === "google") {
-        const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
-        const supabase = getSupabaseBrowserClient();
-        const { data: session } = await supabase.auth.getSession();
-        if (session?.session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.session.access_token}`;
-        }
-      }
-
       const res = await fetch("/api/onboarding/checkout", {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: state.fullName,
           phone: state.phone,
@@ -1062,9 +962,6 @@ function Step5Summary({
           plan: state.plan,
           selectedDomain: `${state.websiteName}.storo.id`,
           customDomain: state.customDomain || undefined,
-          email: state.email,
-          password: state.authMethod === "google" ? undefined : state.password,
-          authMethod: state.authMethod || "email",
           referralCode: referralCode || undefined,
         }),
       });
@@ -1081,29 +978,9 @@ function Step5Summary({
         xenditInvoiceUrl: data.xenditInvoiceUrl || "",
       });
 
-      // Sign user in client-side so the session cookie persists across the
-      // Xendit redirect — when they come back to /payment/success, they're
-      // already authenticated and can be auto-routed to /dashboard.
-      // Google users already have a session from step 4, so skip.
-      if (state.authMethod !== "google" && state.email && state.password) {
-        try {
-          const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
-          const supabase = getSupabaseBrowserClient();
-          await supabase.auth.signInWithPassword({
-            email: state.email,
-            password: state.password,
-          });
-        } catch (signInErr) {
-          // Non-fatal: payment can still proceed; user just won't be auto-logged-in
-          console.warn("[checkout] auto sign-in failed:", signInErr);
-        }
-      }
-
       if (data.xenditInvoiceUrl) {
         window.location.href = data.xenditInvoiceUrl;
       } else {
-        // No Xendit URL (manual payment fallback). User is already signed in
-        // — drop them straight into the dashboard so they can pay from there.
         window.location.href = "/dashboard";
       }
     } catch {
@@ -1120,7 +997,6 @@ function Step5Summary({
         <p className="text-sm text-gray-500 mt-1">Periksa data Anda sebelum melanjutkan ke pembayaran.</p>
       </div>
 
-      {/* Summary card */}
       <div className="bg-gray-50 rounded-xl p-5 space-y-3">
         <SummaryRow label="Nama" value={state.fullName} />
         <SummaryRow label="Nama Toko" value={state.storeName} />
@@ -1241,10 +1117,10 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ── Step 5: Success ──────────────────────────────────────────────────────
 function Step6Success({ state }: { state: State }) {
   const plan = getPlan(state.plan);
   const waUrl = buildWaUrl(state.fullName, state.phone, state.plan, state.websiteName);
+  void Star;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 text-center">
@@ -1257,7 +1133,6 @@ function Step6Success({ state }: { state: State }) {
         Tim Storo akan menghubungi Anda dalam <strong>1x24 jam</strong> setelah pembayaran.
       </p>
 
-      {/* Summary */}
       <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left space-y-2">
         {plan && (
           <>
@@ -1283,7 +1158,6 @@ function Step6Success({ state }: { state: State }) {
         )}
       </div>
 
-      {/* CTA: pay from dashboard if Xendit failed */}
       {state.invoiceId && !state.xenditInvoiceUrl && (
         <Link
           href={`/dashboard/billing/${state.invoiceId}`}
@@ -1294,7 +1168,6 @@ function Step6Success({ state }: { state: State }) {
         </Link>
       )}
 
-      {/* WhatsApp CTA */}
       <a
         href={waUrl}
         target="_blank"
