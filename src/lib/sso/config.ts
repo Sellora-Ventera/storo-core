@@ -9,13 +9,22 @@ function requireEnv(name: string): string {
   return v;
 }
 
+// Production-safe site URL. Prefer NEXT_PUBLIC_SITE_URL (already used for
+// Xendit success/failed redirects and OG tags), fall back to https://storo.id
+// — NEVER http://localhost — so a missing env in prod can't echo localhost
+// back to the IdP. Strips trailing slash for clean concatenation.
+function siteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL ?? "https://storo.id";
+  return raw.replace(/\/+$/, "");
+}
+
 export const SSO_ISSUER = process.env.SSO_ISSUER ?? "https://sso.ventera.ai";
 export const SSO_CLIENT_ID = process.env.SSO_CLIENT_ID ?? "";
 export const SSO_CLIENT_SECRET = process.env.SSO_CLIENT_SECRET ?? "";
 export const SSO_REDIRECT_URI =
-  process.env.SSO_REDIRECT_URI ?? "http://localhost:3000/auth/sso/callback";
+  process.env.SSO_REDIRECT_URI ?? `${siteUrl()}/auth/sso/callback`;
 export const SSO_POST_LOGOUT_URI =
-  process.env.SSO_POST_LOGOUT_URI ?? "http://localhost:3000/";
+  process.env.SSO_POST_LOGOUT_URI ?? `${siteUrl()}/`;
 export const SSO_SCOPES =
   process.env.SSO_SCOPES ?? "openid profile email phone offline_access realm";
 
@@ -23,7 +32,6 @@ export function isSsoConfigured(): boolean {
   return Boolean(
     process.env.SSO_ISSUER &&
       process.env.SSO_CLIENT_ID &&
-      process.env.SSO_REDIRECT_URI &&
       process.env.SSO_STATE_SECRET,
   );
 }
