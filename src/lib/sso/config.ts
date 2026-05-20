@@ -28,6 +28,14 @@ export const SSO_POST_LOGOUT_URI =
 export const SSO_SCOPES =
   process.env.SSO_SCOPES ?? "openid profile email phone offline_access realm";
 
+// Canonical public origin of this app, derived from SSO_REDIRECT_URI's origin.
+// Use this as the base for any redirect we issue from SSO routes — never use
+// req.url, because behind a reverse proxy that doesn't forward Host correctly
+// (Apache without ProxyPreserveHost, or Next.js not trusting X-Forwarded-Host)
+// req.url can come back as "https://localhost:3000" and poison every URL we
+// build from it (final dashboard redirect, error redirects, logout redirect).
+export const APP_ORIGIN = new URL(SSO_REDIRECT_URI).origin;
+
 export function isSsoConfigured(): boolean {
   return Boolean(
     process.env.SSO_ISSUER &&
