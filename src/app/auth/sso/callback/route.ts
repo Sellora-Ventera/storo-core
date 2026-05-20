@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import * as client from "openid-client";
-import { getOidcConfig } from "@/lib/sso/config";
+import { getOidcConfig, SSO_REDIRECT_URI } from "@/lib/sso/config";
 import { readStateCookie, clearStateCookie } from "@/lib/sso/state-cookie";
 import { syncSsoUserToSupabase } from "@/lib/sso/sync";
 import { mintSupabaseSession } from "@/lib/sso/session";
@@ -27,36 +27,62 @@ export async function GET(req: NextRequest) {
   let tokens;
   try {
     const config = await getOidcConfig();
-    tokens = await client.authorizationCodeGrant(config, new URL(req.url), {
-      pkceCodeVerifier: stateCookie.codeVerifier,
-      expectedState: stateCookie.state,
-    });
+    // Pass redirect_uri explicitly via tokenEndpointParameters so the value
+    // sent in the token POST matches SSO_REDIRECT_URI used during the
+    // authorization request byte-for-byte. openid-client v6 derives it from
+    // currentUrl by default, but req.url can carry a forwarded host on some
+    // platforms or differ subtly (trailing slash, host case) — and per
+    // RFC 6749 §4.1.3 a mismatch triggers invalid_grant.
+    tokens = await client.authorizationCodeGrant(
+      config,
+      new URL(req.url),
+      {
+        pkceCodeVerifier: stateCookie.codeVerifier,
+        expectedState: stateCookie.state,
+      },
+      { redirect_uri: SSO_REDIRECT_URI },
+    );
   } catch (e) {
     // openid-client v6 throws ResponseBodyError with .error/.error_description
-    // when the token endpoint returns 4xx. Surface the IdP's actual payload so
-    // misconfigs (bad client_secret, redirect_uri mismatch, PKCE) are visible
-    // instead of a generic message.
+    // when the token endpoint returns 4xx. .cause is the parsed JSON body —
+    // serialize explicitly because String(obj) gives "[object Object]" and
+    // hides the actual IdP-side reason (e.g. "code_verifier mismatch").
     const err = e as {
       message?: string;
       error?: string;
       error_description?: string;
       code?: string;
+      status?: number;
       cause?: unknown;
     };
+    const causeStr = (() => {
+      if (!err.cause) return undefined;
+      if (typeof err.cause === "string") return err.cause;
+      try {
+        return JSON.stringify(err.cause);
+      } catch {
+        return Object.prototype.toString.call(err.cause);
+      }
+    })();
     const parts = [
       err.error,
       err.error_description,
       err.message,
       err.code,
-      err.cause ? String(err.cause) : undefined,
+      err.status ? `status=${err.status}` : undefined,
+      causeStr,
     ].filter(Boolean);
     const reason = parts.join(" | ") || "unknown";
-    console.error("[SSO] token exchange failed:", {
+    console.error("[SSO] token exchange failed", {
       error: err.error,
       error_description: err.error_description,
       message: err.message,
       code: err.code,
+      status: err.status,
       cause: err.cause,
+      requestUrl: req.url,
+      hasCodeVerifier: Boolean(stateCookie.codeVerifier),
+      hasState: Boolean(stateCookie.state),
     });
     return redirectToSignIn(req, "sso_exchange_failed", reason);
   }
