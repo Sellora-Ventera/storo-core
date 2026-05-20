@@ -43,10 +43,21 @@ export async function getOidcConfig(): Promise<client.Configuration> {
   const issuer = requireEnv("SSO_ISSUER");
   const clientId = requireEnv("SSO_CLIENT_ID");
 
+  // SSO Ventera registers clients with token_endpoint_auth_method=
+  // client_secret_basic (sends secret in HTTP Basic header). openid-client v6
+  // defaults to ClientSecretPost when a secret is passed, which mismatches
+  // and produces ResponseBodyError ("server responded with an error in the
+  // response body") at the token exchange step.
   _configPromise = client
-    .discovery(new URL(issuer), clientId, SSO_CLIENT_SECRET, undefined, {
-      execute: issuer.startsWith("http://") ? [client.allowInsecureRequests] : [],
-    })
+    .discovery(
+      new URL(issuer),
+      clientId,
+      undefined,
+      client.ClientSecretBasic(SSO_CLIENT_SECRET),
+      {
+        execute: issuer.startsWith("http://") ? [client.allowInsecureRequests] : [],
+      },
+    )
     .then((cfg) => {
       _config = cfg;
       return cfg;

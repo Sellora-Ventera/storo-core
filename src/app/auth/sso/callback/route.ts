@@ -32,7 +32,33 @@ export async function GET(req: NextRequest) {
       expectedState: stateCookie.state,
     });
   } catch (e) {
-    return redirectToSignIn(req, "sso_exchange_failed", String(e));
+    // openid-client v6 throws ResponseBodyError with .error/.error_description
+    // when the token endpoint returns 4xx. Surface the IdP's actual payload so
+    // misconfigs (bad client_secret, redirect_uri mismatch, PKCE) are visible
+    // instead of a generic message.
+    const err = e as {
+      message?: string;
+      error?: string;
+      error_description?: string;
+      code?: string;
+      cause?: unknown;
+    };
+    const parts = [
+      err.error,
+      err.error_description,
+      err.message,
+      err.code,
+      err.cause ? String(err.cause) : undefined,
+    ].filter(Boolean);
+    const reason = parts.join(" | ") || "unknown";
+    console.error("[SSO] token exchange failed:", {
+      error: err.error,
+      error_description: err.error_description,
+      message: err.message,
+      code: err.code,
+      cause: err.cause,
+    });
+    return redirectToSignIn(req, "sso_exchange_failed", reason);
   }
 
   const claims = tokens.claims();
