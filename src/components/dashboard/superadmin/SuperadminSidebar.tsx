@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,7 +16,6 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import storoLogo from "@/assets/storo-logo.png";
 
 const navItems = [
@@ -34,7 +33,6 @@ const navItems = [
 
 export default function SuperadminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
@@ -42,10 +40,10 @@ export default function SuperadminSidebar() {
   };
 
   const handleSignOut = async () => {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    router.push("/sign-in");
-    router.refresh();
+    // Full-page nav to /auth/sso/logout — clears Supabase session AND fires
+    // RP-initiated logout at Ventera SSO (falls back to "/" if SSO is not
+    // configured).
+    window.location.href = "/auth/sso/logout";
   };
 
   return (

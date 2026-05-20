@@ -7,6 +7,14 @@ const AUTH_PAGES = ["/sign-in", "/sign-up"];
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  // SSO Ventera routes handle their own cookies (sso_state cookie set by
+  // /auth/sso/login, Supabase session cookies set by /auth/sso/callback via
+  // verifyOtp). Running updateSession() here would race with verifyOtp's
+  // cookie writes and drop the session.
+  if (pathname.startsWith("/auth/sso/")) {
+    return NextResponse.next();
+  }
+
   // OAuth code forwarder. Supabase Auth sometimes redirects back to the Site URL
   // (https://storo.id/?code=...) instead of the redirectTo we pass — happens
   // when /auth/callback isn't in the "Redirect URLs" allowlist. Forward to the
