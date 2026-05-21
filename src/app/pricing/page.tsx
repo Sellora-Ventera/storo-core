@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     "Pilih paket yang tepat untuk bisnis Anda. Semua paket sudah termasuk setup toko, import produk, dan dukungan tim kami.",
 };
 
-const WA_NUMBER = "6285157406969";
+const WA_NUMBER = "6285148416700";
 const WA_LINK = `https://wa.me/${WA_NUMBER}`;
 
 // Extend shared Plan with pricing-page-specific CTA config

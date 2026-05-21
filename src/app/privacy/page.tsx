@@ -90,7 +90,7 @@ export default function PrivacyPage() {
             Pertanyaan tentang kebijakan ini? Hubungi{" "}
             <a href="mailto:support@storo.id">support@storo.id</a> atau WhatsApp{" "}
             <a
-              href="https://wa.me/6285157406969"
+              href="https://wa.me/6285148416700"
               target="_blank"
               rel="noopener noreferrer"
             >

@@ -37,7 +37,7 @@ const organizationJsonLd = {
     "Jasa pembuatan webstore terkelola untuk seller Indonesia. Setup beres oleh tim — payment gateway, ongkir real-time, loyalty & membership, blog SEO, multi-store dashboard. Hemat 23% per transaksi vs marketplace.",
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+6285157406969",
+    telephone: "+6285148416700",
     contactType: "customer service",
     availableLanguage: "Indonesian",
   },

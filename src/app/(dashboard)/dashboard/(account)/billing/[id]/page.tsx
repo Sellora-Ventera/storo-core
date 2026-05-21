@@ -121,7 +121,7 @@ export default function InvoiceDetailPage() {
       `*2 Digit Kode Unik:* ${code}\n\n` +
       `Mohon diverifikasi. Terima kasih!`
     );
-    return `https://wa.me/6285157406969?text=${msg}`;
+    return `https://wa.me/6285148416700?text=${msg}`;
   };
 
   if (loading) {
@@ -296,7 +296,7 @@ export default function InvoiceDetailPage() {
             {invoice.status === "overdue" ? "Invoice ini telah jatuh tempo." : "Invoice ini dibatalkan."}
           </p>
           <p className="text-sm text-muted-foreground">Hubungi tim kami jika Anda masih ingin melanjutkan.</p>
-          <a href={`https://wa.me/6285157406969?text=${encodeURIComponent("Halo Admin Storo.id, saya ingin melanjutkan pembayaran invoice #" + invoice.id.slice(0,8).toUpperCase())}`}
+          <a href={`https://wa.me/6285148416700?text=${encodeURIComponent("Halo Admin Storo.id, saya ingin melanjutkan pembayaran invoice #" + invoice.id.slice(0,8).toUpperCase())}`}
             target="_blank" rel="noreferrer">
             <Button variant="outline" className="gap-2">
               <MessageCircle size={16} /> Hubungi Admin

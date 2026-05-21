@@ -57,7 +57,7 @@ export default function Step6Status({ goNext, goBack }: Step6Props) {
       {/* WhatsApp Contact */}
       <div className="flex items-center justify-center gap-2 mb-8">
         <a
-          href="https://wa.me/6285157406969"
+          href="https://wa.me/6285148416700"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-full text-sm font-medium hover:bg-green-100 transition-colors"

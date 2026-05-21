@@ -306,7 +306,7 @@ export default async function DashboardPage() {
                 {/* Footer actions */}
                 <div className="border-t border-gray-100 px-5 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap bg-gray-50/50">
                   <a
-                    href="https://wa.me/6285157406969"
+                    href="https://wa.me/6285148416700"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-green-600 transition-colors cursor-pointer"

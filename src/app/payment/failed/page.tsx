@@ -19,7 +19,7 @@ function FailedContent() {
       `Invoice ID: ${invoiceId || "N/A"}\n\n` +
       `Mohon bantuannya. Terima kasih.`
     );
-    return `https://wa.me/6285157406969?text=${msg}`;
+    return `https://wa.me/6285148416700?text=${msg}`;
   };
 
   return (
