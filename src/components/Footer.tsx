@@ -11,7 +11,7 @@ const productLinks = [
 
 const helpLinks = [
   { label: "FAQ", href: "/#faq", external: false },
-  { label: "Kontak", href: "https://wa.me/6285157406969", external: true },
+  { label: "Kontak", href: "https://wa.me/6285148416700", external: true },
   { label: "Dokumentasi", href: "/docs", external: false },
 ];
 

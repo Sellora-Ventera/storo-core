@@ -5,7 +5,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Settings } from "lucide-react";
 
 const DEFAULT_SETTINGS = {
-  whatsapp_number: "6285157406969",
+  whatsapp_number: "6285148416700",
   ops_fee_pct: "4",
   pg_fee_pct: "1",
   disbursement_cycle: "monthly",

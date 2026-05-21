@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     "Pilih template toko online Anda. Semua template sudah responsif, SEO-friendly, dan siap pakai.",
 };
 
-const WA_LINK = "https://wa.me/6285157406969";
+const WA_LINK = "https://wa.me/6285148416700";
 
 interface TemplateItem {
   id: string;

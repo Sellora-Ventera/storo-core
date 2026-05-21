@@ -66,7 +66,7 @@ const HowItWorks = () => {
             </p>
             <Button
               variant="secondary"
-              onClick={() => window.open('https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20mau%20tanya%20tentang%20cara%20kerja%20webstore', '_blank')}
+              onClick={() => window.open('https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20tanya%20tentang%20cara%20kerja%20webstore', '_blank')}
             >
               Tanya via WhatsApp
             </Button>

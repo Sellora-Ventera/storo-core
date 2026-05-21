@@ -69,7 +69,7 @@ const Hero = () => {
               variant="outline"
               size="lg"
               className="text-lg border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white cursor-pointer"
-              onClick={() => window.open('https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20gratis%20untuk%20webstore', '_blank')}
+              onClick={() => window.open('https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20gratis%20untuk%20webstore', '_blank')}
             >
               Konsultasi Gratis
             </Button>

@@ -92,7 +92,7 @@ function reducer(state: State, action: Action): State {
   return state;
 }
 
-const WA_NUMBER = "6285157406969";
+const WA_NUMBER = "6285148416700";
 
 function buildWaUrl(name: string, phone: string, plan: string, website: string) {
   const planLabel = plan ? ` Paket ${plan.charAt(0).toUpperCase() + plan.slice(1)}` : "";
