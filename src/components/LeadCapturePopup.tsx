@@ -65,7 +65,7 @@ const LeadCapturePopup = () => {
       const message = `Halo Storo.id! Saya tertarik untuk membuat webstore.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
       
       // Open WhatsApp
-      window.open(`https://wa.me/6285157406969?text=${message}`, '_blank');
+      window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
       
       // Track Google Ads conversion
       trackConversion();
@@ -93,7 +93,7 @@ const LeadCapturePopup = () => {
         localStorage.setItem("storo-lead-capture-seen", "true");
         
         const message = `Halo Storo.id! Saya tertarik untuk membuat webstore.%0A%0AEmail: ${encodeURIComponent(validatedData.email)}${validatedData.whatsapp ? `%0AWhatsApp: ${encodeURIComponent(validatedData.whatsapp)}` : ''}`;
-        window.open(`https://wa.me/6285157406969?text=${message}`, '_blank');
+        window.open(`https://wa.me/6285148416700?text=${message}`, '_blank');
         
         // Track Google Ads conversion
         trackConversion();

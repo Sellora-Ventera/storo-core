@@ -82,7 +82,7 @@ const Pricing = () => {
                   <Link
                     href={
                       pkg.enterprise
-                        ? "https://wa.me/6285157406969"
+                        ? "https://wa.me/6285148416700"
                         : `/onboarding?plan=${pkg.id}`
                     }
                   >

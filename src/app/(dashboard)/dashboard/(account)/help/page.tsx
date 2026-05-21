@@ -136,10 +136,10 @@ export default function HelpPage() {
             <p className="text-green-700 text-sm mb-4">
               Tim support kami siap membantu Anda setiap hari kerja pukul 08.00 – 17.00 WIB.
               Hubungi kami di{" "}
-              <span className="font-semibold">+6285157406969</span>
+              <span className="font-semibold">+6285148416700</span>
             </p>
             <a
-              href="https://wa.me/6285157406969"
+              href="https://wa.me/6285148416700"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"

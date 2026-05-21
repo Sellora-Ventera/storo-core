@@ -82,7 +82,7 @@ export default function DocsPage() {
               Panduan singkat untuk semua fitur platform. Tidak menemukan yang
               dicari?{" "}
               <a
-                href="https://wa.me/6285157406969"
+                href="https://wa.me/6285148416700"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"

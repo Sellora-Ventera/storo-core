@@ -209,7 +209,7 @@ export default async function StoreDetailPage({
               <p className="text-red-700 text-sm">Hubungi tim kami melalui WhatsApp untuk detail perbaikan.</p>
             )}
             <a
-              href="https://wa.me/6285157406969"
+              href="https://wa.me/6285148416700"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 mt-3 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
@@ -526,7 +526,7 @@ export default async function StoreDetailPage({
           <p className="text-gray-500 text-xs mt-0.5">Tim kami siap membantu Anda.</p>
         </div>
         <a
-          href="https://wa.me/6285157406969"
+          href="https://wa.me/6285148416700"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"

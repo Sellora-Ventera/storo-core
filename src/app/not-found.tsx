@@ -93,7 +93,7 @@ export default function NotFound() {
         <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
           <span>Butuh bantuan?</span>
           <a
-            href="https://wa.me/6285157406969"
+            href="https://wa.me/6285148416700"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 font-medium cursor-pointer"

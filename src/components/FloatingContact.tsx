@@ -10,7 +10,7 @@ interface Message {
 
 const CHAT_API = "https://wfthvovlhphnrodrqxqt.supabase.co/functions/v1/chat-storo";
 const WELCOME_MESSAGE = "Halo! Saya asisten virtual Storo.id. Ada yang bisa saya bantu seputar pembuatan webstore?";
-const WA_URL = "https://wa.me/6285157406969?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20tentang%20webstore";
+const WA_URL = "https://wa.me/6285148416700?text=Halo%20Storo.id,%20saya%20mau%20konsultasi%20tentang%20webstore";
 
 const FloatingContact = () => {
   const [menuOpen, setMenuOpen] = useState(false);
