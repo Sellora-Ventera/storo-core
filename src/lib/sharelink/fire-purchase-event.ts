@@ -48,72 +48,84 @@ export async function fireReferralPurchaseEvent(
 
   const referralCode = refereeClient.referred_by_code as string;
 
-  // 2. Look up the referrer to get their user_id + active plan
+  // 2. Look up the referrer to get their user_id + active plan.
+  //    Referrers fall into two buckets:
+  //      a) Storo merchants: row in `clients` keyed by `own_referral_code`.
+  //         Apply the monthly cap based on their active plan.
+  //      b) Sharelink-managed cross-tenant campaigns (e.g. a tenant on
+  //         sharelink whose code is shared with Storo but who doesn't have a
+  //         Storo store): no Storo `clients` row. Skip cap check and forward
+  //         the event — sharelink resolves the referrer + reward server-side.
   const { data: referrerClient, error: rcErr } = await supabase
     .from("clients")
     .select("id, user_id")
     .eq("own_referral_code", referralCode)
     .maybeSingle();
 
-  if (rcErr || !referrerClient) {
-    return { ok: true, skipped: "no_referrer" };
+  if (rcErr) {
+    console.warn("[fireReferralPurchaseEvent] referrer lookup error, forwarding without cap:", rcErr);
   }
 
-  const { data: requests } = await supabase
-    .from("onboarding_requests")
-    .select("plan, status, created_at")
-    .eq("client_id", referrerClient.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  const liveOrPending = (requests ?? []).find((r) => r.status === "live")
-    ?? (requests ?? []).find((r) => r.status !== "rejected");
-  const referrerPlan = liveOrPending?.plan ?? null;
-
-  if (!referrerPlan) {
-    return { ok: true, skipped: "referrer_plan_unknown" };
-  }
-
-  const capRupiah = getRewardCapForPlan(referrerPlan);
-  const defaultRewardIDR = Number(process.env.SHARELINK_DEFAULT_REWARD_IDR ?? "100000");
-
-  // 3. Sum referrer's rewards this calendar month (UTC for consistency with Sharelink)
   const sl = sharelinkClient();
-  let monthlyAccrued = 0;
-  try {
-    const startOfMonth = new Date(Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      1,
-    )).toISOString();
 
-    const rewards = await sl.listRewards({
-      recipientId: referrerClient.user_id,
-      limit: 100,
-    });
+  // Storo-side cap only applies when the referrer is a Storo merchant with a
+  // known plan. Otherwise (sharelink cross-tenant campaign), skip silently.
+  if (referrerClient) {
+    const { data: requests } = await supabase
+      .from("onboarding_requests")
+      .select("plan, status, created_at")
+      .eq("client_id", referrerClient.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
 
-    monthlyAccrued = rewards.data
-      .filter((r) => r.created_at >= startOfMonth)
-      .filter((r) => r.status !== "clawed_back" && r.status !== "failed")
-      .reduce((sum, r) => {
-        const fromAmount = typeof r.amount === "number" ? r.amount : 0;
-        const calcCfg = r.metadata?.calculation_config as Record<string, unknown> | undefined;
-        const flat = calcCfg?.flat as { amount?: number } | undefined;
-        const fromMeta = typeof flat?.amount === "number" ? flat.amount : 0;
-        return sum + (fromAmount || fromMeta);
-      }, 0);
-  } catch (err) {
-    console.warn("[fireReferralPurchaseEvent] listRewards failed, proceeding without cap check:", err);
-    // Fall through — better to over-pay than block legitimate rewards
-  }
+    const liveOrPending = (requests ?? []).find((r) => r.status === "live")
+      ?? (requests ?? []).find((r) => r.status !== "rejected");
+    const referrerPlan = liveOrPending?.plan ?? null;
 
-  // 4. Cap check — if new reward would exceed monthly cap, skip
-  if (capRupiah > 0 && monthlyAccrued + defaultRewardIDR > capRupiah) {
-    console.log(
-      `[fireReferralPurchaseEvent] CAP SKIP — referrer ${referrerClient.user_id} ` +
-      `accrued ${monthlyAccrued} + reward ${defaultRewardIDR} > cap ${capRupiah} (plan ${referrerPlan})`,
-    );
-    return { ok: true, skipped: "cap_reached" };
+    if (referrerPlan) {
+      const capRupiah = getRewardCapForPlan(referrerPlan);
+      const defaultRewardIDR = Number(process.env.SHARELINK_DEFAULT_REWARD_IDR ?? "100000");
+
+      // 3. Sum referrer's rewards this calendar month (UTC for consistency with Sharelink)
+      let monthlyAccrued = 0;
+      try {
+        const startOfMonth = new Date(Date.UTC(
+          new Date().getUTCFullYear(),
+          new Date().getUTCMonth(),
+          1,
+        )).toISOString();
+
+        const rewards = await sl.listRewards({
+          recipientId: referrerClient.user_id,
+          limit: 100,
+        });
+
+        monthlyAccrued = rewards.data
+          .filter((r) => r.created_at >= startOfMonth)
+          .filter((r) => r.status !== "clawed_back" && r.status !== "failed")
+          .reduce((sum, r) => {
+            const fromAmount = typeof r.amount === "number" ? r.amount : 0;
+            const calcCfg = r.metadata?.calculation_config as Record<string, unknown> | undefined;
+            const flat = calcCfg?.flat as { amount?: number } | undefined;
+            const fromMeta = typeof flat?.amount === "number" ? flat.amount : 0;
+            return sum + (fromAmount || fromMeta);
+          }, 0);
+      } catch (err) {
+        console.warn("[fireReferralPurchaseEvent] listRewards failed, proceeding without cap check:", err);
+        // Fall through — better to over-pay than block legitimate rewards
+      }
+
+      // 4. Cap check — if new reward would exceed monthly cap, skip
+      if (capRupiah > 0 && monthlyAccrued + defaultRewardIDR > capRupiah) {
+        console.log(
+          `[fireReferralPurchaseEvent] CAP SKIP — referrer ${referrerClient.user_id} ` +
+          `accrued ${monthlyAccrued} + reward ${defaultRewardIDR} > cap ${capRupiah} (plan ${referrerPlan})`,
+        );
+        return { ok: true, skipped: "cap_reached" };
+      }
+    }
+  } else {
+    console.log(`[fireReferralPurchaseEvent] referrer not in Storo (cross-tenant code ${referralCode}), forwarding without cap`);
   }
 
   // 5. Fire the event — Sharelink will compute reward based on code's metadata.reward_override
