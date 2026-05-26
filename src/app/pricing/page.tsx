@@ -20,6 +20,7 @@ interface PricingPlan {
   id: string;
   name: string;
   setup: number | null;
+  setupOriginal?: number;
   monthly: number | null;
   monthlyLabel?: string;
   popular?: boolean;
@@ -33,6 +34,7 @@ const plans: PricingPlan[] = PLANS.filter((p) => p.isActive).map((p) => ({
   id: p.id,
   name: p.name,
   setup: p.setup,
+  setupOriginal: p.setupOriginal,
   monthly: p.monthly,
   monthlyLabel: p.monthlyLabel,
   popular: p.popular,
@@ -192,6 +194,11 @@ export default function PricingPage() {
 
                     {plan.setup !== null ? (
                       <>
+                        {plan.setupOriginal && (
+                          <div className="text-sm text-gray-400 line-through">
+                            {formatIDR(plan.setupOriginal)}
+                          </div>
+                        )}
                         <div
                           className={`text-xl font-black mb-1 ${
                             plan.popular ? "text-primary" : "text-foreground"

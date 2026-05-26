@@ -22,6 +22,8 @@ export interface Plan {
   id: PlanId;
   name: string;
   setup: number | null; // IDR, null = custom quote
+  /** Harga setup sebelum diskon, ditampilkan dengan coret di UI. */
+  setupOriginal?: number;
   monthly: number | null; // IDR/month, null = custom quote
   monthlyLabel?: string;
   popular?: boolean;
@@ -39,7 +41,8 @@ export const PLANS: Plan[] = [
   {
     id: "basic",
     name: "Basic",
-    setup: 1_000_000,
+    setup: 1_500_000,
+    setupOriginal: 2_000_000,
     monthly: 150_000,
     isActive: true,
     isLegacy: false,
@@ -59,6 +62,7 @@ export const PLANS: Plan[] = [
     id: "standard",
     name: "Standard",
     setup: 2_500_000,
+    setupOriginal: 3_000_000,
     monthly: 350_000,
     popular: true,
     isActive: true,
@@ -80,6 +84,7 @@ export const PLANS: Plan[] = [
     id: "business",
     name: "Business",
     setup: 5_000_000,
+    setupOriginal: 7_500_000,
     monthly: 750_000,
     isActive: true,
     isLegacy: false,

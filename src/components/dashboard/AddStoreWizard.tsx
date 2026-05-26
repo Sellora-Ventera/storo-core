@@ -250,6 +250,11 @@ function Step1Plan({
 
               <div className="text-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{p.name}</h3>
+                {p.setupOriginal && (
+                  <div className="text-sm text-gray-400 line-through">
+                    {formatIDR(p.setupOriginal)}
+                  </div>
+                )}
                 <div className="text-2xl font-bold text-primary mb-1">
                   {formatIDR(p.setup!)}
                 </div>

@@ -52,6 +52,11 @@ export default function Step3Plan({ state, goNext, goBack, updateState }: Step3P
                 <h3 className="font-bold text-gray-900 text-base">{plan.name}</h3>
                 {plan.setup !== null && plan.monthly !== null ? (
                   <>
+                    {plan.setupOriginal && (
+                      <p className="text-xs text-gray-400 line-through mt-1">
+                        {formatIDR(plan.setupOriginal)}
+                      </p>
+                    )}
                     <p className="text-primary font-semibold text-lg mt-1">
                       {formatIDR(plan.setup)}
                     </p>
