@@ -54,11 +54,11 @@ interface Feature {
 
 const features: Feature[] = [
   { label: "Template-inspired design",                   basic: true,  standard: true,  business: true,  custom: true },
-  { label: "Custom domain",                              basic: false, standard: true,  business: true,  custom: true },
-  { label: "Payment gateway (Xendit & Midtrans)",        basic: false, standard: true,  business: true,  custom: true },
-  { label: "Ongkos kirim otomatis (Biteship lengkap)",   basic: false, standard: true,  business: true,  custom: true },
-  { label: "Dashboard lengkap",                          basic: false, standard: true,  business: true,  custom: true },
-  { label: "Import produk dari Shopee",                  basic: false, standard: true,  business: true,  custom: true },
+  { label: "Custom domain",                              basic: true,  standard: true,  business: true,  custom: true },
+  { label: "Payment gateway (Xendit & Midtrans)",        basic: true,  standard: true,  business: true,  custom: true },
+  { label: "Ongkos kirim otomatis (Biteship lengkap)",   basic: true,  standard: true,  business: true,  custom: true },
+  { label: "Dashboard lengkap",                          basic: true,  standard: true,  business: true,  custom: true },
+  { label: "Import produk dari Shopee",                  basic: true,  standard: true,  business: true,  custom: true },
   { label: "Blog & SEO tools",                           basic: false, standard: true,  business: true,  custom: true },
   { label: "Promo & kode diskon",                        basic: true,  standard: true,  business: true,  custom: true },
   { label: "Analitik penjualan",                         basic: false, standard: true,  business: true,  custom: true },
